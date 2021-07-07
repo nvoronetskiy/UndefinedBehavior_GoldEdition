@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <algorithm>
 #include <tuple>
 #include <memory>
 #include <string>
@@ -30,9 +31,9 @@ class remember_destructor : public remember_destructor_helper {
 template<size_t Max_size>
 class any_data {
 private:
-	char data[Max_size];
-	void* destructor; // [sizeof(void*)] ; // lol, всЄ что лежит в классе - указатель на таблицу виртуальных функций
-	bool trivially_destructible;    // не может быть известно на компил€ции, т.к. € вызываю это уже непосредственно в коде
+	char  data[Max_size];
+	void* destructor; // lol, всЄ что лежит в классе - указатель на таблицу виртуальных функций
+	bool  trivially_destructible;    // не может быть известно на компил€ции, т.к. € вызываю это уже непосредственно в коде
 public:
 	// некоторые ограничени€, чтобы корректно обрабатывать вс€кие объекты с сложными деструкторами и т.д.
 	// 1. ѕринимаю значение только по rvalue, чтобы ограничить пользовател€ от ломани€ себе всего
@@ -54,8 +55,12 @@ public:
 		}
 	}
 
-	// todo - move конструктор дл€ этой ебанины, копи удалить. » только конструктор кстати, оператор нахуй.
-
+	any_data(const any_data&) = delete; // как бы удал€етс€ автоматически при создании мув конструктора, но сделаю €вно
+	any_data(any_data&& other) noexcept : destructor(other.destructor), trivially_destructible(other.trivially_destructible) {
+		std::copy(other.data, other.data + Max_size, data);
+		other.destructor = nullptr;
+		other.trivially_destructible = false; // после этого деструктор у other уже вызыватьс€ не будет
+	}
 	// получаю информацию по значению, потом удал€ю всЄ что тут было, дл€ корректного вызова деструкторов один раз и проч.
 	// короче const_cast полученной отсюда ссылки аукнетс€ тебе больно
 	template<typename ... Types>
@@ -80,17 +85,21 @@ class testclass {
 private:
 	std::string s;
 public:
+	testclass(const std::string& s) : s(s) {}
 	testclass(std::string&& s) : s(s) {}
+	testclass(testclass&& other) noexcept : s(std::move(other.s)) {}
 	~testclass() {
-		std::cout << " im here" << std::endl;
+		std::cout << s << " im here" << std::endl;
 	}
 };
 
 int main() {
 	int ival = 5;
 	float fval = 3.14f;
+	std::string s = "abcd1";
+	any_data<48> value(std::tuple{ testclass(s), fval});
+	auto& [a, b] = value.GetDataAs<std::string, float>();
+	std::cout << a << '\t' << b << std::endl;
 
-	any_data<48> value(std::tuple<testclass, int>{ std::string("4324"), fval});
-	auto& [a, b] = value.GetDataAs<std::string, int>();
-	std::cout << a << '\t' << b;
+	return 0;
 }
