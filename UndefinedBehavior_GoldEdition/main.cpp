@@ -2,7 +2,6 @@
 #include <iostream>
 #include <algorithm>
 #include <tuple>
-#include <memory>
 #include <string>
 
 #if _DEBUG
@@ -10,74 +9,61 @@
 #else
 #define on_debug(expression)
 #endif
-// действительно move, обнуляет мувнутую память памяти
+// действительно move, обнуляет мувнутую память
 inline void realmemmove(void* dest, void* srs, size_t count) {
 	std::memcpy(dest, srs, count);
 	std::memset(srs, 0, count);
 }
-
-class remember_destructor_helper {
+class base_remember_destructor {
 public:
-	virtual void Destroy(void* ptr) = 0;
+	virtual void Destroy(void* ptr) const = 0;
+};
+// запоминает, если Condition == true и не запоминает, если условие не выполняется
+template<typename T, bool Condition>
+class remember_destructor : public base_remember_destructor {
+	void Destroy(void* ptr) const override { std::cout << "TRIVIAL"; }
 };
 template<typename T>
-class remember_destructor : public remember_destructor_helper {
-	void Destroy(void* ptr) override {
+class remember_destructor<T, true> : public base_remember_destructor {
+	void Destroy(void* ptr) const override {
+		std::cout << "NONTRIVIAL";
 		(reinterpret_cast<T*>(ptr))->~T();
 	}
 };
 
-// contains one unit of any struct/class ДЛЯ ОДНОРАЗОВОГО ИСПОЛЬЗОВАНИЯ( положил данные, взял данные. Всё! Вызывает деструктор в конце своего лайфтайма)
-template<size_t Max_size>
-class any_data {
+// Передавая данные на хранение в memory_block<max_size>(далее - memory_block) Вы: 
+// 1. Понимаете, что переданное значение больше нельзя использовать, оно побайтово обнуляется
+// 2. Подтверждаете, что в деструкторах типов передаваемых значений нет переходов по ссылкам/разыменования указателей являющихся полями класса, нет арифметики удаляемых указателей
+// 3. Соглашаетесь, что больше ими не владеете и передаёте право на владение и обязательство на удаление на принимающую сторону(memory_block)
+template<size_t max_size>
+class memory_block {
 private:
-	char  data[Max_size];
-	void* destructor; // lol, всё что лежит в классе - указатель на таблицу виртуальных функций
-	bool  trivially_destructible;    // не может быть известно на компиляции, т.к. я вызываю это уже непосредственно в коде
+	char  data[max_size]; // память под хранение любых входных данных
+	void* destructor;     // всё что лежит в классе-запоминателе деструктора - указатель на таблицу виртуальных функций
 public:
-	// некоторые ограничения, чтобы корректно обрабатывать всякие объекты с сложными деструкторами и т.д.
-	// 1. Принимаю значение только по rvalue, чтобы ограничить пользователя от ломания себе всего
-	// 2. Копирую значение себе в буфер и потом обнуляю всё в value, предупреждая двойное удаление и подобные вещи,
-	// при этом неявно предполагается, что в деструкторе нет ничего сложнее delete ptr, то есть нет delete ptr+1, например
-	// что привело бы к удалению не своей памяти и падению программы
 	template<typename ... Types>
-	any_data(std::tuple<Types...>&& value) : on_debug(data{}) {
-		static_assert(sizeof(std::tuple<Types...>) <= Max_size);
+	explicit memory_block(std::tuple<Types...>&& value) {
+		static_assert(sizeof(std::tuple<Types...>) <= max_size);
 
-		realmemmove(&data[0], &value, sizeof(std::tuple<Types...>));
-		if constexpr (std::is_trivially_destructible_v<std::tuple<Types...>>) {
-			trivially_destructible = true;
-		}
-		else {
-			trivially_destructible = false;
-			// по сути здесь происходит запоминание деструктора, прямо в значение указателя я пишу класс(т.к. он состоит из всего одного указателя на vtable)
-			new(&destructor) remember_destructor<std::tuple<Types...>>{};
-		}
+		realmemmove(data, &value, sizeof(std::tuple<Types...>));
+		// по сути здесь происходит запоминание деструктора, прямо в значении указателя я конструирую класс(т.к. он состоит из всего одного указателя на vtable)
+		new(&destructor) remember_destructor<std::tuple<Types...>, !std::is_trivially_destructible_v<std::tuple<Types...>>>{};
 	}
-
-	any_data(const any_data&) = delete; // как бы удаляется автоматически при создании мув конструктора, но сделаю явно
-	any_data(any_data&& other) noexcept : destructor(other.destructor), trivially_destructible(other.trivially_destructible) {
-		std::copy(other.data, other.data + Max_size, data);
+	memory_block(memory_block&& other) noexcept : destructor(other.destructor) {
+		std::copy(other.data, other.data + max_size, data);
 		other.destructor = nullptr;
-		other.trivially_destructible = false; // после этого деструктор у other уже вызываться не будет
 	}
-	// получаю информацию по значению, потом удаляю всё что тут было, для корректного вызова деструкторов один раз и проч.
-	// короче const_cast полученной отсюда ссылки аукнется тебе больно
 	template<typename ... Types>
 	const std::tuple<Types...>& GetDataAs() const {
-		static_assert(sizeof(std::tuple<Types...>) <= Max_size);
+		static_assert(sizeof(std::tuple<Types...>) <= max_size);
 		// bit_cast не подходит, потому что он не работает для объектов с нетривиальными копи конструкторами
 		// копировать или даже создавать std::tuple<Types...> нельзя, т.к. может не оказаться конструкторов копирования/дефолтных
-		// остаётся лишь один тип - возвращать ссылку на свои данные. И при этом запретить их менять
-		return *(reinterpret_cast<std::tuple<Types...>*>(const_cast<char*>(&data[0])));
+		// остаётся лишь один вариант - возвращать ссылку на свои данные. И при этом запретить их менять
+		return *(reinterpret_cast<std::tuple<Types...>*>(const_cast<char*>(data)));
 	}
-
-	~any_data() {
-		if (trivially_destructible) {
-			return;
-		} // not trivially destructible
+	~memory_block() {
 		// т.к. у меня void*, а для корретного выбора из vtable нужен указатель на базовый класс, то реинтерпретирую указатель на указатель...
-		reinterpret_cast<remember_destructor_helper*>(&destructor)->Destroy(&data[0]);
+		reinterpret_cast<base_remember_destructor*>(&destructor)->Destroy(data);
 	}
 };
 
@@ -85,6 +71,7 @@ class testclass {
 private:
 	std::string s;
 public:
+	testclass(const testclass& other) : s(other.s) {}
 	testclass(const std::string& s) : s(s) {}
 	testclass(std::string&& s) : s(s) {}
 	testclass(testclass&& other) noexcept : s(std::move(other.s)) {}
@@ -96,10 +83,11 @@ public:
 int main() {
 	int ival = 5;
 	float fval = 3.14f;
-	std::string s = "abcd1";
-	any_data<48> value(std::tuple{ testclass(s), fval});
-	auto& [a, b] = value.GetDataAs<std::string, float>();
-	std::cout << a << '\t' << b << std::endl;
+	std::string s = "All right";
+	using namespace std::literals;
 
+	memory_block<126> value(std::tuple("хех"s, fval, ival));
+	auto& [str, fv, iv] = value.GetDataAs<int, float, int>();
+	std::cout << str << '\t' << fv << '\t' << iv << std::endl;
 	return 0;
 }
