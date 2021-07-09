@@ -1,93 +1,58 @@
 
 #include <iostream>
-#include <algorithm>
-#include <tuple>
 #include <string>
 
-#if _DEBUG
-#define on_debug(expression) expression
-#else
-#define on_debug(expression)
-#endif
-// действительно move, обнуляет мувнутую память
-inline void realmemmove(void* dest, void* srs, size_t count) {
-	std::memcpy(dest, srs, count);
-	std::memset(srs, 0, count);
-}
-class base_remember_destructor {
+#include "kelbon_functional_traits.hpp"
+#include "kelbon_memory_block.hpp"
+
+// шаблон базового класса с виртуальным оператором () в protected зоне, принимающим и возвращающим какие то аргументы переданные в шаблоне, да-да.
+template<typename ResultType, typename ... ArgTypes>
+class base_action {	
 public:
-	virtual void Destroy(void* ptr) const = 0;
-};
-// запоминает, если Condition == true и не запоминает, если условие не выполняется
-template<typename T, bool Condition>
-class remember_destructor : public base_remember_destructor {
-	void Destroy(void* ptr) const override { std::cout << "TRIVIAL"; }
-};
-template<typename T>
-class remember_destructor<T, true> : public base_remember_destructor {
-	void Destroy(void* ptr) const override {
-		std::cout << "NONTRIVIAL";
-		(reinterpret_cast<T*>(ptr))->~T();
-	}
+	using result_type = ResultType;
+	template<size_t index> using argument_type = typename type_of_element<index, ArgTypes...>::type;
+
+	virtual ~base_action() = 0;
+protected:
+	virtual result_type operator()(ArgTypes...) = 0;
 };
 
-// Передавая данные на хранение в memory_block<max_size>(далее - memory_block) Вы: 
-// 1. Понимаете, что переданное значение больше нельзя использовать, оно побайтово обнуляется
-// 2. Подтверждаете, что в деструкторах типов передаваемых значений нет переходов по ссылкам/разыменования указателей являющихся полями класса, нет арифметики удаляемых указателей
-// 3. Соглашаетесь, что больше ими не владеете и передаёте право на владение и обязательство на удаление на принимающую сторону(memory_block)
-template<size_t max_size>
-class memory_block {
-private:
-	char  data[max_size]; // память под хранение любых входных данных
-	void* destructor;     // всё что лежит в классе-запоминателе деструктора - указатель на таблицу виртуальных функций
+template<typename Function, typename BaseClass>
+class wrap_action : public BaseClass {
 public:
-	template<typename ... Types>
-	explicit memory_block(std::tuple<Types...>&& value) {
-		static_assert(sizeof(std::tuple<Types...>) <= max_size);
+protected:
 
-		realmemmove(data, &value, sizeof(std::tuple<Types...>));
-		// по сути здесь происходит запоминание деструктора, прямо в значении указателя я конструирую класс(т.к. он состоит из всего одного указателя на vtable)
-		new(&destructor) remember_destructor<std::tuple<Types...>, !std::is_trivially_destructible_v<std::tuple<Types...>>>{};
-	}
-	memory_block(memory_block&& other) noexcept : destructor(other.destructor) {
-		std::copy(other.data, other.data + max_size, data);
-		other.destructor = nullptr;
-	}
-	template<typename ... Types>
-	const std::tuple<Types...>& GetDataAs() const {
-		static_assert(sizeof(std::tuple<Types...>) <= max_size);
-		// bit_cast не подходит, потому что он не работает для объектов с нетривиальными копи конструкторами
-		// копировать или даже создавать std::tuple<Types...> нельзя, т.к. может не оказаться конструкторов копирования/дефолтных
-		// остаётся лишь один вариант - возвращать ссылку на свои данные. И при этом запретить их менять
-		return *(reinterpret_cast<std::tuple<Types...>*>(const_cast<char*>(data)));
-	}
-	~memory_block() {
-		// т.к. у меня void*, а для корретного выбора из vtable нужен указатель на базовый класс, то реинтерпретирую указатель на указатель...
-		reinterpret_cast<base_remember_destructor*>(&destructor)->Destroy(data);
+};
+//template<...>
+//... WrapAction()
+
+// todo - слушатель, который просто передаёт инфу слушающим дальше, подключенным к нему(позволяет делать только 1 указатель на слушателя в объектах/потоке физики, передавать сообщение
+// и он уже выбирает кому нужно сообщение, например слушатели физики / конкретных каких то вещей.
+
+// todo трейты is_method is_functor/lambda и т.д.(или концепты в некоторых местах, а не трейты), также можно is const/volatile/noexcept(лол)
+// ещё есть & && квалификаторы после функции, помогающие перегружать по контексту использования (this)
+// todo может ещё и для шаблонов захуярить?
+// можно ещё написать свой tuple во первых чтобы не зависеть от реализаций его внутри, во вторых чтобы он укладывал данные в нужном порядке
+
+struct s {
+	constexpr size_t operator()(int, double) const {
+		return 4;
 	}
 };
-
-class testclass {
-private:
-	std::string s;
-public:
-	testclass(const testclass& other) : s(other.s) {}
-	testclass(const std::string& s) : s(s) {}
-	testclass(std::string&& s) : s(s) {}
-	testclass(testclass&& other) noexcept : s(std::move(other.s)) {}
-	~testclass() {
-		std::cout << s << " im here" << std::endl;
-	}
-};
-
 int main() {
+	using t = decltype([](int){ return false; });
+	function_info<realmemmove>::parameter_list::argument_type<2> ann = 6;
+	std::cout << ann << std::endl;
+
+	function_info<t{}>::result_type sprigan = true;
 	int ival = 5;
 	float fval = 3.14f;
 	std::string s = "All right";
-	using namespace std::literals;
 
-	memory_block<126> value(std::tuple("хех"s, fval, ival));
-	auto& [str, fv, iv] = value.GetDataAs<int, float, int>();
+	memory_block<126> value(std::tuple(s, fval, ival));
+	const auto& [str, fv, iv] = value.GetDataAs<int, float, int>();
+
 	std::cout << str << '\t' << fv << '\t' << iv << std::endl;
+
 	return 0;
 }
