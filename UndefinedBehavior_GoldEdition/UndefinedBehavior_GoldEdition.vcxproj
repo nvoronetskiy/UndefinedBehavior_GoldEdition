@@ -152,6 +152,7 @@
     <ClInclude Include="kelbon_preprocessor.hpp" />
     <ClInclude Include="kelbon_type_traits_base.hpp" />
     <ClInclude Include="kelbon_type_traits_numeric.hpp" />
+    <ClInclude Include="kelbon_type_traits_variadic.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

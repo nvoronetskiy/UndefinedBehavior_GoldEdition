@@ -3,8 +3,8 @@
 #ifndef KELBON_TYPE_TRAITS_FUNCTIONAL_HPP
 #define KELBON_TYPE_TRAITS_FUNCTIONAL_HPP
 
-#include "kelbon_concepts_base.hpp"
 #include "kelbon_concepts_functional.hpp"
+#include "kelbon_type_traits_variadic.hpp"
 
 enum class ref_qual : int { none, lvalue, rvalue };
 

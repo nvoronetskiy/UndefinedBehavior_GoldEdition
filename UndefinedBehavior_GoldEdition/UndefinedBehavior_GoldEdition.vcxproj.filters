@@ -41,5 +41,8 @@
     <ClInclude Include="kelbon_concepts_functional.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="kelbon_type_traits_variadic.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

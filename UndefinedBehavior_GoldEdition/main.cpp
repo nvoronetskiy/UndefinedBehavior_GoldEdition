@@ -42,9 +42,9 @@ struct s {
 	}
 };
 int main() {
-	make_value_sequence<10, 0> v1;        // not compiles
-	value_sequence<int, 10, 0, 0>::type v; // compiles
-	extract_value_sequence<value_sequence<int, 10, 0, 0>::type>::type vv; // compiles
+	reverse_type_list<int, double, char, float, int, int, size_t, std::string>::type vv;
+	// TODO - тип reversed tuple(структурка, которая принимает пак параметров и внутри имеет using type std::tuple от перевернутого пака параметров)
+ 
 	// todo - сделать ещё для лямбд с захватом(уже работает через signature)
 	// todo - сделать signature с перегрузкой для functor, которая сразу понимает всё и берёт тип от &operator()
 	//function_info<realmemmove>::parameter_list::argument_type<2> ann = 6;

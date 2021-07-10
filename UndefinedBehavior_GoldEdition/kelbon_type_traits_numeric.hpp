@@ -23,16 +23,16 @@ struct value_list {
 	static constexpr T argument_value = value_of_element<index, Values...>::value;
 };
 
-// TRAIT INTEGER SEQUENCE
+// TRAIT VALUE_SEQUENCE TODO - улучшить (sequence) и перенести в variadic
 template<numeric T, T...>
 struct value_sequence;
 
-template<numeric T, T count, T start_value, T current_index, T ... Values>
-struct value_sequence<T, count, start_value, current_index, Values...> {
-	using type = typename value_sequence<T, count, start_value, current_index + 1, Values..., start_value + sizeof...(Values)>::type;
+template<numeric T, T count, T start_value, T current_index, T step, T ... Values>
+struct value_sequence<T, count, start_value, current_index, step, Values...> {
+	using type = typename value_sequence<T, count, start_value, current_index + 1, step, Values..., static_cast<T>(start_value + step * sizeof...(Values))> ::type;
 };
-template<numeric T, T count, T start_value, T ... Values> // specialization for end of resursion because count == index
-struct value_sequence<T, count, start_value, count, Values...> {
+template<numeric T, T count, T start_value, T step, T ... Values> // specialization for end of resursion because count == index
+struct value_sequence<T, count, start_value, count, step, Values...> {
 	using type = value_list<T, Values...>;
 };
 
@@ -47,10 +47,30 @@ struct extract_value_sequence<U<T, args...>> {
 	using type = sequence<args...>;
 };
 
+// Нужно явно указывать какого типа ВСЕ ТРИ аргумента. Например, если нужно size_t, то должно быть make_value_sequen<size_t(N), size_t(M), size_t(K)>
 // 10.07.2021 - работает на clang ( для положительных чисел, иначе приводит почему то к size_t и громадные числа получаются), на msvc не работает, но clang не умеет в лямбды в 
 // невычислимых контекстах на данный момент( а мне это нужно щас)))
-template<numeric auto Count, numeric auto StartValue = decltype(Count){0}>
-using make_value_sequence = typename extract_value_sequence<value_sequence<decltype(Count), Count, StartValue, decltype(Count){0}>::type>::type;
+// по идее можно заменить типы второго и третьего аргумента на decltype(Count), но пока это не работает(нормально)
+template<numeric auto Count, numeric auto StartValue = decltype(Count){0}, numeric auto Step = decltype(Count){1} >
+using make_value_sequence = typename extract_value_sequence<value_sequence<decltype(Count), Count, StartValue, decltype(Count){0}, Step>::type>::type;
+
+// TEMPLATE REVERSE_TYPE_LIST
+namespace detail {
+	template<typename ...>
+	struct reverse_type_list_helper;
+
+	template<typename ... Types, int ... Args>
+	struct reverse_type_list_helper<sequence<Args...>, Types...> {
+		static_assert(sizeof...(Types) == sizeof...(Args), "Incorrect sequence or type list");
+		using help_type = type_list<Types...>;
+		using type = type_list<typename help_type::template argument_type<Args>...>;
+	};
+} // namespace detail
+
+template<typename ... Types>
+struct reverse_type_list {
+	using type = typename detail::reverse_type_list_helper<make_value_sequence<static_cast<int>(sizeof...(Types)), static_cast<int>(sizeof...(Types)) - 1, -1>, Types...>::type;
+};
 
 #endif // !KELBON_TYPE_TRAITS_NUMERIC_HPP
 
