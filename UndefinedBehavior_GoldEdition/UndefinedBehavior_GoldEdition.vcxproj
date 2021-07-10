@@ -42,7 +42,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -145,11 +145,13 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="kelbon_concepts.hpp" />
-    <ClInclude Include="kelbon_functional_traits.hpp" />
+    <ClInclude Include="kelbon_concepts_base.hpp" />
+    <ClInclude Include="kelbon_concepts_functional.hpp" />
+    <ClInclude Include="kelbon_type_traits_functional.hpp" />
     <ClInclude Include="kelbon_memory_block.hpp" />
     <ClInclude Include="kelbon_preprocessor.hpp" />
-    <ClInclude Include="kelbon_type_traits.hpp" />
+    <ClInclude Include="kelbon_type_traits_base.hpp" />
+    <ClInclude Include="kelbon_type_traits_numeric.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

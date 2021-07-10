@@ -20,19 +20,25 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="kelbon_functional_traits.hpp">
+    <ClInclude Include="kelbon_type_traits_functional.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="kelbon_type_traits.hpp">
+    <ClInclude Include="kelbon_type_traits_base.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="kelbon_concepts.hpp">
+    <ClInclude Include="kelbon_concepts_base.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="kelbon_memory_block.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="kelbon_preprocessor.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="kelbon_type_traits_numeric.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="kelbon_concepts_functional.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

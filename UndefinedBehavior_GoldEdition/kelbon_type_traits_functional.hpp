@@ -1,10 +1,10 @@
 
 
-#ifndef KELBON_FUNCTIONAL_TRAITS_HPP
-#define KELBON_FUNCTIONAL_TRAITS_HPP
+#ifndef KELBON_TYPE_TRAITS_FUNCTIONAL_HPP
+#define KELBON_TYPE_TRAITS_FUNCTIONAL_HPP
 
-#include "kelbon_type_traits.hpp"
-#include "kelbon_concepts.hpp"
+#include "kelbon_concepts_base.hpp"
+#include "kelbon_concepts_functional.hpp"
 
 enum class ref_qual : int { none, lvalue, rvalue };
 
@@ -251,8 +251,9 @@ consteval auto get_function_signature(functor auto x) noexcept {
 }
 // Need real value, so declval is not working here(not a problem for functors, use {} for initialization
 // or signature template or get_function_signature function...)
+// lambdas with capture have no default constructor, so you cant use it for them, but can use signature<T>
 template<auto Function>
 using function_info = decltype(get_function_signature(Function));
 
-#endif // !KELBON_FUNCTIONAL_TRAITS_HPP
+#endif // !KELBON_TYPE_TRAITS_FUNCTIONAL_HPP
 

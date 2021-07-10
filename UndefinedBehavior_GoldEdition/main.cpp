@@ -2,9 +2,10 @@
 #include <iostream>
 #include <string>
 
-#include "kelbon_functional_traits.hpp"
+#include "kelbon_type_traits_functional.hpp"
 #include "kelbon_memory_block.hpp"
-
+#include "kelbon_type_traits_numeric.hpp"
+/*
 // шаблон базового класса с виртуальным оператором () в protected зоне, принимающим и возвращающим какие то аргументы переданные в шаблоне, да-да.
 template<typename ResultType, typename ... ArgTypes>
 class base_action {	
@@ -23,6 +24,7 @@ public:
 protected:
 
 };
+*/
 //template<...>
 //... WrapAction()
 
@@ -40,11 +42,18 @@ struct s {
 	}
 };
 int main() {
-	using t = decltype([](int){ return false; });
-	function_info<realmemmove>::parameter_list::argument_type<2> ann = 6;
-	std::cout << ann << std::endl;
-
-	function_info<t{}>::result_type sprigan = true;
+	make_value_sequence<10, 0> v1;        // not compiles
+	value_sequence<int, 10, 0, 0>::type v; // compiles
+	extract_value_sequence<value_sequence<int, 10, 0, 0>::type>::type vv; // compiles
+	// todo - сделать ещё для лямбд с захватом(уже работает через signature)
+	// todo - сделать signature с перегрузкой для functor, которая сразу понимает всё и берёт тип от &operator()
+	//function_info<realmemmove>::parameter_list::argument_type<2> ann = 6;
+	//std::cout << ann << std::endl;
+	//using t = decltype([](int) { return false; });
+	//function_info<t{}>::result_type sprigan = true;
+	//using capt = decltype([&sprigan](int) {return false; });
+	// todo - reverse parameter pack type)))
+	//signature<decltype(&capt::operator())>::result_type rt;
 	int ival = 5;
 	float fval = 3.14f;
 	std::string s = "All right";
