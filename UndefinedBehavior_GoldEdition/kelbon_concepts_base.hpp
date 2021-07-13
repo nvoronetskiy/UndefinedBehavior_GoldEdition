@@ -20,6 +20,11 @@ namespace kelbon {
 	}&& requires {
 		static_cast<T>(4); // можно создавать от числа
 	};
+
+	// for situatuions like requires { { expression } -> exist }; 
+	template<typename T>
+	concept exist = true;
+
 } // namespace kelbon
 
 #endif // !KELBON_CONCEPTS_BASE_HPP

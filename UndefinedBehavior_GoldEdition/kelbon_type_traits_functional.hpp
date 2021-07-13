@@ -243,6 +243,10 @@ namespace kelbon {
 		using parameter_list = type_list<ArgumentTypes...>;
 		static constexpr bool is_noexcept = true;
 	};
+
+	template<functor T>
+	struct signature<T> : signature<decltype(&T::operator())> {};
+
 	// по сути ещё элипсы сишные ... , но пошли они нахуй
 
 	consteval auto get_function_signature(auto x) noexcept {
@@ -251,6 +255,24 @@ namespace kelbon {
 	consteval auto get_function_signature(functor auto x) noexcept {
 		return signature<decltype(&decltype(x)::operator())>{};
 	}
+
+	// CONCEPT function
+	template<typename Applicant>
+	concept function = requires {
+		typename signature<Applicant>::result_type;
+		typename signature<Applicant>::parameter_list;
+		signature<Applicant>::is_noexcept;
+	};
+	// CONCEPT method
+	// DO NOT WORK FOR STATIC METHODS(they are same as functions) частный случай функции
+	template<typename Applicant> // not functor because signature see functors as operator() == method
+	concept method = !functor<Applicant> && function<Applicant> && requires {
+		typename signature<Applicant>::owner_type;
+		signature<Applicant>::is_const;
+		signature<Applicant>::is_volatile;
+		signature<Applicant>::ref_qualification;
+	};
+
 	// Need real value, so declval is not working here(not a problem for functors, use {} for initialization
 	// or signature template or get_function_signature function...)
 	// lambdas with capture have no default constructor, so you cant use it for them, but can use signature<T>

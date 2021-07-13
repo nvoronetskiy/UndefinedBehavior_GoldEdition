@@ -8,29 +8,12 @@
 
 #include "kelbon_tuple.hpp"
 
+#include "kelbon_template_base_class.hpp"
+
 // аналог функции возвращающей значение на компайл тайме - шаблонна€ переменна€(не нужны никакие дополнительные скобки, просто get< ... >, то есть замена () на <>
 // аналог функции, провер€ющей что-то - концепты
 // функци€, возвращающа€ тип - using
-/*
-// шаблон базового класса с виртуальным оператором () в protected зоне, принимающим и возвращающим какие то аргументы переданные в шаблоне, да-да.
-template<typename ResultType, typename ... ArgTypes>
-class base_action {	
-public:
-	using result_type = ResultType;
-	template<size_t index> using get_element = typename type_of_element<index, ArgTypes...>::type;
 
-	virtual ~base_action() = 0;
-protected:
-	virtual result_type operator()(ArgTypes...) = 0;
-};
-
-template<typename Function, typename BaseClass>
-class wrap_action : public BaseClass {
-public:
-protected:
-
-};
-*/
 //template<...>
 //... WrapAction()
 
@@ -52,15 +35,17 @@ struct test {
 	test(const test& other) {
 		std::cout << "copy" << std::endl;
 	}
-	test(test&& other) {
+	test(test&& other) noexcept {
 		std::cout << "move" << std::endl;
 	}
-
+	int func(float value) const {
+		return value * v;
+	}
 	test& operator=(const test&) {
 		std::cout << "operator=COPY" << std::endl;
 		return *this;
 	}
-	test& operator=(test&&) {
+	test& operator=(test&&) noexcept {
 		std::cout << "operator=MOVE" << std::endl;
 		return *this;
 	}
@@ -69,9 +54,34 @@ struct test {
 	}
 	int v;
 };
+constexpr int func1(int value) noexcept {
+	return value * 2;
+}
+void func() {
+	//return func1();
+}
 // TODO - написать тесты в виде static asserts в конце каждого файла про type_traits и т.д., оборачива€ их в on_debug
 using namespace kelbon;
 int main() {
+
+	func();
+	int x1 = 5;
+	constexpr float x2 = 10;
+	auto wrap1 = wrap_action([](int value) {return value; });
+	auto xtest1 = wrap1(5);
+	auto wrap2 = wrap_action(func1);
+	auto xtest2 = wrap2(x2);
+
+	test test_value(5);
+	//(test_value.*xf)(5);
+	auto wrap3 = wrap_action(&test::func);
+	auto xtest3 = wrap3(&test_value, 20.f);
+
+	using help_lambda = decltype([]() { return get_function_signature(func); });
+	constexpr bool h = function<decltype(&help_lambda::operator())>;
+	constexpr bool h1 = method<decltype(&help_lambda::operator())>;
+	constexpr bool h2 = function<decltype(&func)>;
+	signature<decltype(&func)>::result_type;
 
 	// TODO - придумать что то с версионностью моего namespace, мб inline namespace использовать как-то
 

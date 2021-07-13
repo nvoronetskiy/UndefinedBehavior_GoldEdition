@@ -76,6 +76,7 @@ namespace kelbon {
 			destructor = other.destructor;
 			std::copy(other.data, other.data + other_max_size, data);
 			other.destructor = nullptr;
+			return *this;
 		}
 		
 		// специфика tuple в том, что он складывает элементы в обратном порядке, так что если положить в этот класс <int,double>, а потом читать <T,X,int,double>, то всё будет хорошо,
