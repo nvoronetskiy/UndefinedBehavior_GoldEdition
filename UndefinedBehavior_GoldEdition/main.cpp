@@ -5,13 +5,19 @@
 #include "kelbon_type_traits_functional.hpp"
 #include "kelbon_memory_block.hpp"
 #include "kelbon_type_traits_numeric.hpp"
+
+#include "kelbon_tuple.hpp"
+
+// аналог функции возвращающей значение на компайл тайме - шаблонна€ переменна€(не нужны никакие дополнительные скобки, просто get< ... >, то есть замена () на <>
+// аналог функции, провер€ющей что-то - концепты
+// функци€, возвращающа€ тип - using
 /*
 // шаблон базового класса с виртуальным оператором () в protected зоне, принимающим и возвращающим какие то аргументы переданные в шаблоне, да-да.
 template<typename ResultType, typename ... ArgTypes>
 class base_action {	
 public:
 	using result_type = ResultType;
-	template<size_t index> using argument_type = typename type_of_element<index, ArgTypes...>::type;
+	template<size_t index> using get_element = typename type_of_element<index, ArgTypes...>::type;
 
 	virtual ~base_action() = 0;
 protected:
@@ -36,32 +42,63 @@ protected:
 // todo может ещЄ и дл€ шаблонов заху€рить?
 // можно ещЄ написать свой tuple во первых чтобы не зависеть от реализаций его внутри, во вторых чтобы он укладывал данные в нужном пор€дке
 
-struct s {
-	constexpr size_t operator()(int, double) const {
-		return 4;
+struct test {
+	test() {
+		std::cout << "default" << std::endl;
 	}
+	test(int v) : v(v) {
+		std::cout << "standard" << std::endl;
+	}
+	test(const test& other) {
+		std::cout << "copy" << std::endl;
+	}
+	test(test&& other) {
+		std::cout << "move" << std::endl;
+	}
+
+	test& operator=(const test&) {
+		std::cout << "operator=COPY" << std::endl;
+		return *this;
+	}
+	test& operator=(test&&) {
+		std::cout << "operator=MOVE" << std::endl;
+		return *this;
+	}
+	~test() {
+		std::cout << "destroyed" << std::endl;
+	}
+	int v;
 };
+// TODO - написать тесты в виде static asserts в конце каждого файла про type_traits и т.д., оборачива€ их в on_debug
+using namespace kelbon;
 int main() {
-	reverse_type_list<int, double, char, float, int, int, size_t, std::string>::type vv;
-	// TODO - тип reversed tuple(структурка, котора€ принимает пак параметров и внутри имеет using type std::tuple от перевернутого пака параметров)
- 
-	// todo - сделать ещЄ дл€ л€мбд с захватом(уже работает через signature)
-	// todo - сделать signature с перегрузкой дл€ functor, котора€ сразу понимает всЄ и берЄт тип от &operator()
-	//function_info<realmemmove>::parameter_list::argument_type<2> ann = 6;
+
+	// TODO - придумать что то с версионностью моего namespace, мб inline namespace использовать как-то
+
+	//std::tuple<int, double, float, std::string> stp(5, 3., 3.f, std::string("33"));
+	//auto x = tp.get<3>();
+	//tp.get<3>() = "no idea what to write";
+
+	// TODO - дл€ tuple написать begin/end /iterator, специализации std::tuple_element std::tuple_size, deduction guides и т.д.
+
+	
+	// TODO - вз€тие значени€ по номеру из последовательности значений(сейчас вроде неоч работает) и sequence доделать(внутри полезные штуки объ€вить, вз€тие по номеру, кол-во...)
+	//function_info<realmemmove>::parameter_list::get_element<2> ann = 6;
 	//std::cout << ann << std::endl;
 	//using t = decltype([](int) { return false; });
 	//function_info<t{}>::result_type sprigan = true;
 	//using capt = decltype([&sprigan](int) {return false; });
 	// todo - reverse parameter pack type)))
 	//signature<decltype(&capt::operator())>::result_type rt;
-	int ival = 5;
-	float fval = 3.14f;
-	std::string s = "All right";
+	//int ival = 5;
+	//float fval = 3.14f;
+	//std::string s = "All right";
+	//tuple<int, double, std::string, char> t;
+	//memory_block<140> value(std::tuple(t, s));
 
-	memory_block<126> value(std::tuple(s, fval, ival));
-	const auto& [str, fv, iv] = value.GetDataAs<int, float, int>();
+	//const auto& [str, fv] = value.GetDataAs<tuple<int, double>, std::string>();
 
-	std::cout << str << '\t' << fv << '\t' << iv << std::endl;
+	//std::cout << str << '\t' << fv << '\t' << std::endl;
 
 	return 0;
 }
