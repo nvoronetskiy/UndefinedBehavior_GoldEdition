@@ -9,7 +9,5 @@
 #define on_debug(expression)
 #endif
 
-#define TEST(name) void name##test()
-
 #endif // !KELBON_PREPROCESSOR_HPP
 

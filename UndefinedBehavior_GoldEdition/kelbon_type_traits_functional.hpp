@@ -247,6 +247,10 @@ namespace kelbon {
 	template<functor T>
 	struct signature<T> : signature<decltype(&T::operator())> {};
 
+	// takes pointer/reference to function/method/lambda/FUNCTOR and gives its info
+	template<typename T>
+	struct signature<T> : signature<T*> {};
+
 	// по сути ещё элипсы сишные ... , но пошли они нахуй
 
 	consteval auto get_function_signature(auto x) noexcept {

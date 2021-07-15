@@ -2,7 +2,7 @@
 #ifndef KELBON_TUPLE_HPP
 #define KELBON_TUPLE_HPP
 
-#include <tuple>
+#include <tuple> // structure binding specializtions
 #include <type_traits>
 
 #include "kelbon_type_traits_numeric.hpp"
@@ -19,7 +19,7 @@ namespace kelbon {
 			: value()
 		{}
 		// опять проверка, чтобы не перекрывало move конструктор(хотя казалось бы и не должно...)
-		template<typename U> requires (!same_as<U, value_in_tuple<T, index>>)
+		template<typename U> requires (!std::same_as<U, value_in_tuple<T, index>>)
 		constexpr value_in_tuple(U&& v)
 			noexcept(std::is_nothrow_constructible_v<T, U>)
 			: value(std::forward<U>(v))
@@ -54,8 +54,8 @@ namespace kelbon {
 	struct tuple_base;
 
 	// избегание неправильного раскрытия паков через дополнительную прослойку наследования
-	template<template<typename, size_t...> typename U, size_t ... Indexes, typename ... Types>
-	struct tuple_base<U<size_t, Indexes...>, Types...> : value_in_tuple<Types, Indexes>... {
+	template<size_t ... Indexes, typename ... Types>
+	struct tuple_base<value_list<size_t, Indexes...>, Types...> : value_in_tuple<Types, Indexes>... {
 	protected:
 		using type_array = type_list<Types...>; // запоминание типов для взятия значений по индексу/типу
 
@@ -124,7 +124,12 @@ namespace kelbon {
 			: base_t(std::forward<Args>(args)...)
 		{}
 
-		constexpr tuple(tuple&& other) noexcept(std::is_nothrow_move_constructible_v<base_t>) : base_t(std::forward<tuple>(other)) {}
+		constexpr tuple(const tuple& other)
+			noexcept(std::is_nothrow_copy_constructible_v<base_t>) : base_t(other)
+		{}
+		constexpr tuple(tuple&& other)
+			noexcept(std::is_nothrow_move_constructible_v<base_t>) : base_t(std::move(other))
+		{}
 
 		constexpr ~tuple() = default;
 	};
@@ -134,7 +139,7 @@ namespace kelbon {
 	template<typename First, typename ... Types>
 	tuple(First&&, Types&& ...)->tuple<
 		std::enable_if_t<
-		!same_as<decay_t<First>, tuple<std::remove_reference_t<First>, std::remove_reference_t<Types>...>>,
+		!std::same_as<decay_t<First>, tuple<std::remove_reference_t<First>, std::remove_reference_t<Types>...>>,
 		std::remove_reference_t<First>>,
 		std::remove_reference_t<Types>...
 		>;

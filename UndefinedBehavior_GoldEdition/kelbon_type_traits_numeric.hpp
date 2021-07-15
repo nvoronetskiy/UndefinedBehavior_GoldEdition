@@ -102,9 +102,5 @@ namespace kelbon {
 
 } // namespace kelbon
 
-#include "kelbon_preprocessor.hpp"
-
-on_debug(static_assert(kelbon::same_as<kelbon::reverse_type_list_t<int, double, char>, kelbon::type_list<char, double, int>>);)
-
 #endif // !KELBON_TYPE_TRAITS_NUMERIC_HPP
 

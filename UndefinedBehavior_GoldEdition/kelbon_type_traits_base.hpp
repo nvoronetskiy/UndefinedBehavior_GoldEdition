@@ -21,9 +21,16 @@ namespace kelbon {
 	template<typename T>
 	struct add_rvalue_reference<T&> { using type = T&&; };
 
+	template<typename T>
+	using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
+
 	// TEMPLATE FUNCTION DECLVAL
 	template<typename T>
-	add_rvalue_reference<T> declval() noexcept;
+	add_rvalue_reference_t<T> declval() noexcept;
+
+	// TEMPLATE ALIAS ref_to_func_which_returns. Used for concepts as an analogue of declval template 
+	template<typename T>
+	using ref_to_func_which_returns = add_rvalue_reference_t<T>(*)();
 
 	// TEMPLATE REMOVE_POINTER
 	template<typename T>
@@ -45,9 +52,9 @@ namespace kelbon {
 
 	// TEMPLATE IS_SAME
 	template<typename T, typename U>
-	struct is_same { static constexpr bool value = false; };
+	struct is_same  : false_type {};
 	template<typename T>
-	struct is_same<T, T> { static constexpr bool value = true; };
+	struct is_same<T, T> : true_type {};
 
 	template<typename T, typename U>
 	constexpr inline bool is_same_v = is_same<T, U>::value;

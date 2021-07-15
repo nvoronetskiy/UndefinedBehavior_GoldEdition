@@ -2,7 +2,7 @@
 #ifndef KELBON_MEMORY_BLOCK_HPP
 #define KELBON_MEMORY_BLOCK_HPP
 
-#include <algorithm>
+#include <algorithm> // std::copy, memcpy, memset + traits
 
 namespace kelbon {
 
@@ -34,6 +34,7 @@ namespace kelbon {
 
 	template<typename...>
 	class tuple;
+
 	// Передавая данные на хранение в memory_block<max_size>(далее - memory_block) Вы: 
 	// 1. Понимаете, что переданное значение больше нельзя использовать, оно побайтово обнуляется
 	// 2. Подтверждаете, что в деструкторах типов передаваемых значений нет переходов по ссылкам/разыменования указателей являющихся полями класса, нет арифметики удаляемых указателей
@@ -60,11 +61,13 @@ namespace kelbon {
 			// по сути здесь происходит запоминание деструктора, прямо в значении указателя я конструирую класс(т.к. он состоит из всего одного указателя на vtable)
 			new(&destructor) remember_destructor<TupleType<Types...>, !std::is_trivially_destructible_v<TupleType<Types...>>>{};
 		}
+		memory_block(const memory_block&) = delete;
 		template<typename ... Types>
+		requires (!(is_same_v<typename type_list<Types...>::template get_element<0>, memory_block<max_size, TupleType>> && sizeof...(Types) == 1))
 		memory_block(Types&& ... args) : memory_block(TupleType<std::remove_reference_t<Types>...>(std::forward<Types>(args)...)) {}
 
 		template<size_t other_max_size>
-		memory_block(memory_block<other_max_size>&& other) noexcept : destructor(other.destructor) {
+		memory_block(memory_block<other_max_size, TupleType>&& other) noexcept : destructor(other.destructor) {
 			static_assert(other_max_size <= max_size);
 
 			std::copy(other.data, other.data + other_max_size, data);
@@ -110,10 +113,10 @@ namespace kelbon {
 	};
 
 	template<template<typename...> typename TupleType, typename ... Types>
-	memory_block(TupleType<Types...>&&)->memory_block<sizeof(TupleType<Types..., void*>), TupleType>;
+	memory_block(TupleType<Types...>&&)->memory_block<sizeof(TupleType<Types...>), TupleType>;
 	// TODO - check не перекрывает ли второй гайд первый
 	template<typename ... Types>
-	memory_block(Types&& ...)->memory_block<sizeof(::kelbon::tuple<std::remove_reference_t<Types>..., void*>), ::kelbon::tuple>;
+	memory_block(Types&& ...)->memory_block<sizeof(::kelbon::tuple<std::remove_reference_t<Types>...>), ::kelbon::tuple>;
 
 } // namespace kelbon
 

@@ -43,6 +43,12 @@ namespace kelbon {
 	struct merge_type_lists<T<A...>, U<B...>> {
 		using type = type_list<A..., B...>;
 	};
+
+	template<template<typename...> typename T, template<typename...> typename U, typename ... A, typename ... B, typename ... Types>
+	struct merge_type_lists<T<A...>, U<B...>, Types...> {
+		using type = typename merge_type_lists<type_list<A..., B...>, Types...>::type;
+	};
+
 	template<typename ... Types>
 	using merge_type_lists_t = typename merge_type_lists<Types...>::type;
 

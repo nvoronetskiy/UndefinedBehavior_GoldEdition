@@ -1,6 +1,11 @@
 
 #include <iostream>
 #include <string>
+#include <memory>
+
+#include "test_kelbon_concepts_base.hpp"
+#include "test_kelbon_concepts_functional.hpp"
+#include "test_kelbon_memory_block.hpp"
 
 #include "kelbon_type_traits_functional.hpp"
 #include "kelbon_memory_block.hpp"
@@ -25,36 +30,37 @@
 // todo может ещё и для шаблонов захуярить?
 // можно ещё написать свой tuple во первых чтобы не зависеть от реализаций его внутри, во вторых чтобы он укладывал данные в нужном порядке
 
-struct test {
-	test() {
+struct test1 {
+	test1() {
 		std::cout << "default" << std::endl;
 	}
-	test(int v) : v(v) {
+	test1(int v) : v(v) {
 		std::cout << "standard" << std::endl;
 	}
-	test(const test& other) {
+	test1(const test1& other) {
 		std::cout << "copy" << std::endl;
 	}
-	test(test&& other) noexcept {
+	test1(test1&& other) noexcept {
 		std::cout << "move" << std::endl;
 	}
 	int func(float value) const {
 		return value * v;
 	}
-	test& operator=(const test&) {
+	test1& operator=(const test1&) {
 		std::cout << "operator=COPY" << std::endl;
 		return *this;
 	}
-	test& operator=(test&&) noexcept {
+	test1& operator=(test1&&) noexcept {
 		std::cout << "operator=MOVE" << std::endl;
 		return *this;
 	}
-	~test() {
+	~test1() {
 		std::cout << "destroyed" << std::endl;
 	}
 	int v;
 };
-constexpr int func1(int value) noexcept {
+
+constexpr int func1(int&& value, float* v, const std::string& s) noexcept {
 	return value * 2;
 }
 void func() {
@@ -62,34 +68,53 @@ void func() {
 }
 // TODO - написать тесты в виде static asserts в конце каждого файла про type_traits и т.д., оборачивая их в on_debug
 using namespace kelbon;
+
 int main() {
+	constexpr bool j = function<decltype(func)>;
+	test::TestsForConceptsBase();
+	test::TestsForConceptsFunctional();
+	test::TestsForMemoryBlock();
 
-	func();
-	int x1 = 5;
-	constexpr float x2 = 10;
-	auto wrap1 = wrap_action([](int value) {return value; });
-	auto xtest1 = wrap1(5);
-	auto wrap2 = wrap_action(func1);
-	auto xtest2 = wrap2(x2);
+	//tuple mytuple(1, 2., 2.f, std::string("rewrw"));
+	// todo - какая то хрень с сишными строками типо "wtf man"
+	//tuple mmm{ 5,2.,2.f,std::string("432")};
+	//int x24 = 420;
+	//signature<decltype([&x24]() { x24 += 10; })> m24;
+	//auto& [a, b, c, d] = mmm; // todo - понять почему & нужно тут
+	//func();
+	//int x1 = 5;
+	//constexpr float x2 = 10;
+	// using my_base_class и т.д. для этого
+	//using my_act = base_action<int, int&&, float*, const std::string&>;
+	//using my_wrapped_act = decltype(wrap_action(&func1));
+	//std::unique_ptr<my_act> myaction(new my_wrapped_act(act_wrapper(&func1)));
+	//auto myaction1 = std::make_unique<my_wrapped_act>(&func1);
+	//auto m = myaction1->operator()(5, nullptr, std::string("mda"));
+	//std::unique_ptr<base_action> wrap1(std::make_unique([](int value) {return value; }));
 
-	test test_value(5);
+	//auto xtest1 = wrap1(5);
+	//auto wrap2 = wrap_action(&func1);
+	//std::string s;
+
+	//act_wrapper wrapme(&func);
+
+	//auto xtest2 = wrap2(5, nullptr, s);
+	
+	//signature<decltype(decltype(wrapme)::act_wrapper<decltype(wrapme)>)>
+	//test1 test_value(5);
 	//(test_value.*xf)(5);
-	auto wrap3 = wrap_action(&test::func);
-	auto xtest3 = wrap3(&test_value, 20.f);
+	//auto wrap3 = wrap_action(&test1::func);
+	//auto xtest3 = wrap3(&test_value, 20.f);
 
-	using help_lambda = decltype([]() { return get_function_signature(func); });
-	constexpr bool h = function<decltype(&help_lambda::operator())>;
-	constexpr bool h1 = method<decltype(&help_lambda::operator())>;
-	constexpr bool h2 = function<decltype(&func)>;
-	signature<decltype(&func)>::result_type;
-
-	// TODO - придумать что то с версионностью моего namespace, мб inline namespace использовать как-то
+	//using help_lambda = decltype([]() { return get_function_signature(func); });
+	//constexpr bool h = function<decltype(&help_lambda::operator())>;
+	//constexpr bool h1 = method<decltype(&help_lambda::operator())>;
+	//constexpr bool h2 = function<decltype(&func)>;
+	//signature<decltype(&main)>::result_type;
 
 	//std::tuple<int, double, float, std::string> stp(5, 3., 3.f, std::string("33"));
 	//auto x = tp.get<3>();
 	//tp.get<3>() = "no idea what to write";
-
-	// TODO - для tuple написать begin/end /iterator, специализации std::tuple_element std::tuple_size, deduction guides и т.д.
 
 	
 	// TODO - взятие значения по номеру из последовательности значений(сейчас вроде неоч работает) и sequence доделать(внутри полезные штуки объявить, взятие по номеру, кол-во...)

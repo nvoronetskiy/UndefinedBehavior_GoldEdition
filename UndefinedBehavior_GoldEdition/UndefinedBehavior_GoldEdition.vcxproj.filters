@@ -59,7 +59,13 @@
     <ClInclude Include="kelbon_template_base_class.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="kelbon_TESTS.hpp">
+    <ClInclude Include="test_kelbon_base.hpp">
+      <Filter>Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="test_kelbon_concepts_functional.hpp">
+      <Filter>Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="test_kelbon_memory_block.hpp">
       <Filter>Tests</Filter>
     </ClInclude>
   </ItemGroup>
