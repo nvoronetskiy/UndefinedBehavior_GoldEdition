@@ -3,9 +3,9 @@
 #include <string>
 #include <memory>
 
-#include "test_kelbon_concepts_base.hpp"
-#include "test_kelbon_concepts_functional.hpp"
+#include "test_kelbon_concepts.hpp"
 #include "test_kelbon_memory_block.hpp"
+#include "test_kelbon_act_wrapper.hpp"
 
 #include "kelbon_type_traits_functional.hpp"
 #include "kelbon_memory_block.hpp"
@@ -63,16 +63,13 @@ struct test1 {
 constexpr int func1(int&& value, float* v, const std::string& s) noexcept {
 	return value * 2;
 }
-void func() {
-	//return func1();
-}
+
 // TODO - написать тесты в виде static asserts в конце каждого файла про type_traits и т.д., оборачивая их в on_debug
 using namespace kelbon;
 
 int main() {
-	constexpr bool j = function<decltype(func)>;
-	test::TestsForConceptsBase();
-	test::TestsForConceptsFunctional();
+	test::TestsForActWrapper();
+	test::TestsForConcepts();
 	test::TestsForMemoryBlock();
 
 	//tuple mytuple(1, 2., 2.f, std::string("rewrw"));

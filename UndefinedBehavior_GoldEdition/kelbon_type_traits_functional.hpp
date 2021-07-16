@@ -248,8 +248,8 @@ namespace kelbon {
 	struct signature<T> : signature<decltype(&T::operator())> {};
 
 	// takes pointer/reference to function/method/lambda/FUNCTOR and gives its info
-	template<typename T>
-	struct signature<T> : signature<T*> {};
+//	template<typename T>
+//	struct signature<T> : signature<T*> {};
 
 	// по сути ещё элипсы сишные ... , но пошли они нахуй
 

@@ -148,6 +148,7 @@
     <ClInclude Include="kelbon_concepts_base.hpp" />
     <ClInclude Include="kelbon_concepts_functional.hpp" />
     <ClInclude Include="kelbon_template_base_class.hpp" />
+    <ClInclude Include="test_kelbon_act_wrapper.hpp" />
     <ClInclude Include="test_kelbon_base.hpp" />
     <ClInclude Include="kelbon_tuple.hpp" />
     <ClInclude Include="kelbon_type_traits_functional.hpp" />
@@ -157,8 +158,7 @@
     <ClInclude Include="kelbon_type_traits_numeric.hpp" />
     <ClInclude Include="kelbon_type_traits_variadic.hpp" />
     <ClInclude Include="kelbon_utility.hpp" />
-    <ClInclude Include="test_kelbon_concepts_base.hpp" />
-    <ClInclude Include="test_kelbon_concepts_functional.hpp" />
+    <ClInclude Include="test_kelbon_concepts.hpp" />
     <ClInclude Include="test_kelbon_memory_block.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

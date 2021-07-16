@@ -53,7 +53,7 @@
     <ClInclude Include="kelbon_tuple.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="test_kelbon_concepts_base.hpp">
+    <ClInclude Include="test_kelbon_concepts.hpp">
       <Filter>Tests</Filter>
     </ClInclude>
     <ClInclude Include="kelbon_template_base_class.hpp">
@@ -62,10 +62,10 @@
     <ClInclude Include="test_kelbon_base.hpp">
       <Filter>Tests</Filter>
     </ClInclude>
-    <ClInclude Include="test_kelbon_concepts_functional.hpp">
+    <ClInclude Include="test_kelbon_memory_block.hpp">
       <Filter>Tests</Filter>
     </ClInclude>
-    <ClInclude Include="test_kelbon_memory_block.hpp">
+    <ClInclude Include="test_kelbon_act_wrapper.hpp">
       <Filter>Tests</Filter>
     </ClInclude>
   </ItemGroup>

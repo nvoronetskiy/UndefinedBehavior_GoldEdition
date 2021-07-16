@@ -6,6 +6,7 @@
 #include <memory>
 #include <iostream>
 
+#include "kelbon_concepts_functional.hpp"
 #include "kelbon_template_base_class.hpp"
 #include "kelbon_memory_block.hpp"
 
@@ -46,40 +47,6 @@ namespace kelbon::test {
 		}
 	};
 
-	struct flags {
-		constexpr flags() noexcept
-			: moved(), copied(), deleted(), default_constructed(), copy_constructed(), move_constructed()
-		{}
-		char moved : 1;
-		char copied : 1;
-		char deleted : 1;
-		char default_constructed : 1;
-		char copy_constructed : 1;
-		char move_constructed : 1;
-	};
-	struct test_struct {
-		test_struct() : usefull_data() {
-			std::cout << "default" << std::endl;
-		}
-		test_struct(const test_struct& other) {
-			std::cout << "copy" << std::endl;
-		}
-		test_struct(test_struct&& other) noexcept {
-			std::cout << "move" << std::endl;
-		}
-		test_struct& operator=(const test_struct&) {
-			std::cout << "operator=COPY" << std::endl;
-			return *this;
-		}
-		test_struct& operator=(test_struct&&) noexcept {
-			std::cout << "operator=MOVE" << std::endl;
-			return *this;
-		}
-		~test_struct() {
-			std::cout << "destroyed" << std::endl;
-		}
-		flags usefull_data;
-	};
 } // namespace kelbon::test
 
 #endif // !TEST_KELBON_BASE_HPP
