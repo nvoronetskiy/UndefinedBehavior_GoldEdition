@@ -244,10 +244,10 @@ namespace kelbon {
 		static constexpr bool is_noexcept = true;
 	};
 
-	template<functor T>
+	template<like_functor T>
 	struct signature<T> : signature<decltype(&T::operator())> {};
 
-	// takes pointer/reference to function/method/lambda/FUNCTOR and gives its info
+	// takes pointer/reference to callable/method/lambda/FUNCTOR and gives its info
 //	template<typename T>
 //	struct signature<T> : signature<T*> {};
 
@@ -256,21 +256,30 @@ namespace kelbon {
 	consteval auto get_function_signature(auto x) noexcept {
 		return signature<decltype(x)>{};
 	}
-	consteval auto get_function_signature(functor auto x) noexcept {
+	consteval auto get_function_signature(like_functor auto x) noexcept {
 		return signature<decltype(&decltype(x)::operator())>{};
 	}
 
-	// CONCEPT function
+	// CONCEPT callable
 	template<typename Applicant>
-	concept function = requires {
+	concept callable = requires {
 		typename signature<Applicant>::result_type;
 		typename signature<Applicant>::parameter_list;
 		signature<Applicant>::is_noexcept;
 	};
+
+	// CONCEPT functor
+	template<typename Applicant>
+	concept functor = callable<Applicant> && like_functor<Applicant>;
+
+	// CONCEPT function
+	template<typename Applicant>
+	concept function = !like_functor<Applicant> && callable<Applicant>;
+
 	// CONCEPT method
 	// DO NOT WORK FOR STATIC METHODS(they are same as functions) частный случай функции
-	template<typename Applicant> // not functor because signature see functors as operator() == method
-	concept method = !functor<Applicant> && function<Applicant> && requires {
+	template<typename Applicant> // not like_functor because signature see functors as operator() == method
+	concept method = !like_functor<Applicant> && callable<Applicant> && requires {
 		typename signature<Applicant>::owner_type;
 		signature<Applicant>::is_const;
 		signature<Applicant>::is_volatile;
@@ -278,7 +287,7 @@ namespace kelbon {
 	};
 
 	// Need real value, so declval is not working here(not a problem for functors, use {} for initialization
-	// or signature template or get_function_signature function...)
+	// or signature template or get_function_signature callable...)
 	// lambdas with capture have no default constructor, so you cant use it for them, but can use signature<T>
 	template<auto Function>
 	using function_info = decltype(get_function_signature(Function));

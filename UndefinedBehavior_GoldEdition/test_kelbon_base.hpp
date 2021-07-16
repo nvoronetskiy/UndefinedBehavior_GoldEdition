@@ -25,7 +25,7 @@ namespace kelbon::test {
 	private:
 		std::list<std::unique_ptr<base_test>> tests;
 	public:
-		template<typename T> requires function<T>
+		template<typename T> requires callable<T>
 		void AddTest(T&& task) {
 			tests.emplace_back(std::make_unique<act_wrapper<::kelbon::base_action, T>>(std::forward<T>(task)));
 		}

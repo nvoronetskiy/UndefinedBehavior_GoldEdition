@@ -7,7 +7,7 @@
 
 namespace kelbon::test {
 
-	void numeric_test() {
+	void NumericTest() {
 		constexpr bool test_value =
 			numeric<int> &&
 			numeric<unsigned long> &&
@@ -24,22 +24,22 @@ namespace kelbon::test {
 		static_assert(test_value, "numeric concept fails test");
 	}
 
-	void functor_test() {
+	void FunctorTest() {
 		struct test_class {
 			void operator()() {}
 		};
 		struct no_functor {};
 
-		constexpr bool test_value = functor<test_class> && !functor<no_functor>;
+		constexpr bool test_value = like_functor<test_class> && !like_functor<no_functor>;
 
-		static_assert(test_value, "functor concept fails test");
+		static_assert(test_value, "like_functor concept fails test");
 	}
 
 	void TestsForConcepts() {
 		test_room tester;
 
-		tester.AddTest(&numeric_test);
-		tester.AddTest(&functor_test);
+		tester.AddTest(&NumericTest);
+		tester.AddTest(&FunctorTest);
 
 		tester.StartTesting();
 	}

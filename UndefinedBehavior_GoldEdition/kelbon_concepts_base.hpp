@@ -25,15 +25,15 @@ namespace kelbon {
 	};
 
 	namespace func {
-		// CONCEPT returns (checking result type of the function)
+		// CONCEPT returns (checking result type of the callable)
 		template<typename Func, typename ResultType>
-		concept returns = function<Func> && requires {
+		concept returns = callable<Func> && requires {
 			{ declval<typename signature<Func>::result_type>() }->std::same_as<ResultType>;
 		};
 
 		// CONCEPT accepts
 		template<typename Func, typename ... Types>
-		concept accepts = function<Func> && requires {
+		concept accepts = callable<Func> && requires {
 			{ declval<typename signature<Func>::result_type>() }->std::same_as<type_list<Types...>>;
 		};
 

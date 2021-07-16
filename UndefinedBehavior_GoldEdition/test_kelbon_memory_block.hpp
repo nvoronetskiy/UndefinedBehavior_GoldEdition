@@ -11,7 +11,7 @@
 
 namespace kelbon::test {
 	
-	void memory_block_test() {
+	void MemoryBlockTest() {
 		int x = 10;
 		std::vector<char> vect(100, 'c');
 		std::string str("some string");
@@ -25,7 +25,7 @@ namespace kelbon::test {
 				throw test_failed("memory block GetDataAs works wrong");
 			}
 		}
-		catch (bad_memory_block_access& error) {
+		catch (bad_memory_block_access&) {
 			throw test_failed("memory block SafeGetDataAs checking false positive");
 		}
 		try {
@@ -48,13 +48,13 @@ namespace kelbon::test {
 					throw test_failed("memory block GetDataAs works wrong after move copy");
 				}
 			}
-			catch (bad_memory_block_access& error) {
+			catch (bad_memory_block_access&) {
 				throw test_failed("memory block SafeGetDataAs checking false positive after move");
 			}
 		}
 	}
 
-	void memory_block_destroy_test() {
+	void MemoryBlockDestroyTest() {
 		struct delete_checker {
 			bool was_deleted = false;
 			void operator++(int) {
@@ -83,8 +83,8 @@ namespace kelbon::test {
 
 	void TestsForMemoryBlock() {
 		test_room tester;
-		tester.AddTest(&memory_block_test);
-		tester.AddTest(&memory_block_destroy_test);
+		tester.AddTest(&MemoryBlockTest);
+		tester.AddTest(&MemoryBlockDestroyTest);
 
 		tester.StartTesting();
 	}
