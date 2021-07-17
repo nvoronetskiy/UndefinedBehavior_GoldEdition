@@ -39,8 +39,36 @@ namespace kelbon {
 	template<template<typename...> typename Base, typename...>
 	class act_wrapper;
 
-	// for non-methods, functions, functors and lambdas
+	// for non-methods, functions
 	template<template<typename...> typename Base, callable Actor, typename ResultType, typename ... Types>
+	class act_wrapper<Base, Actor, ResultType, type_list<Types...>>
+		: public Base<ResultType, Types...> {
+	private:
+		Actor F;
+	public:
+		constexpr act_wrapper(const Actor& actor)
+			noexcept(std::is_nothrow_copy_constructible_v<Actor>)
+			: F(actor)
+		{}
+		// no move ctor here because its bad combo with function ref(Actor) (& && same as & &)
+
+		constexpr act_wrapper(act_wrapper&& other)
+			noexcept(std::is_nothrow_move_constructible_v<Actor>)
+			: F(std::move(other.F))
+		{}
+		constexpr act_wrapper(const act_wrapper& other)
+			noexcept(std::is_nothrow_copy_constructible_v<Actor>)
+			: F(other.F)
+		{}
+
+		virtual constexpr ResultType operator()(Types ... args) const override {
+			return F(std::forward<Types>(args)...);
+		}
+		virtual constexpr ~act_wrapper() override = default;
+	};
+
+	// for functors and lambdas
+	template<template<typename...> typename Base, functor Actor, typename ResultType, typename ... Types>
 	class act_wrapper<Base, Actor, ResultType, type_list<Types...>>
 		: public Base<ResultType, Types...> {
 	private:

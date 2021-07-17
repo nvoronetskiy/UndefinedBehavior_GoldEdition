@@ -83,8 +83,8 @@ namespace kelbon::test {
 
 	void TestsForMemoryBlock() {
 		test_room tester;
-		tester.AddTest(&MemoryBlockTest);
-		tester.AddTest(&MemoryBlockDestroyTest);
+		tester.AddTest(MemoryBlockTest);
+		tester.AddTest(MemoryBlockDestroyTest);
 
 		tester.StartTesting();
 	}

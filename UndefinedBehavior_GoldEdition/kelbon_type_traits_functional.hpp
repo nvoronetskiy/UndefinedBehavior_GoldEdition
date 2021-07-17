@@ -24,208 +24,127 @@ namespace kelbon {
 		static constexpr bool is_noexcept = false;
 		static constexpr ref_qual ref_qualification = ref_qual::none;
 	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = false;
-		static constexpr ref_qual ref_qualification = ref_qual::none;
-	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = false;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = true;
-		static constexpr ref_qual ref_qualification = ref_qual::none;
-	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = true;
-		static constexpr ref_qual ref_qualification = ref_qual::none;
-	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = true;
-		static constexpr bool is_noexcept = true;
-		static constexpr ref_qual ref_qualification = ref_qual::none;
-	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = true;
-		static constexpr bool is_noexcept = false;
-		static constexpr ref_qual ref_qualification = ref_qual::none;
-	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = false;
-		static constexpr bool is_volatile = true;
-		static constexpr bool is_noexcept = true;
-		static constexpr ref_qual ref_qualification = ref_qual::none;
-	};
-	// METHODS (LVALUE ref-qual)
 
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...)&> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = false;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = false;
-		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
-	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const&> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const>
+		: signature< ResultType(OwnerType::*)(ArgumentTypes...)> {
 		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = false;
-		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) & noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = false;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = true;
-		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
-	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const& noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = true;
-		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
-	};
-	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile& noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile>
+		: signature< ResultType(OwnerType::*)(ArgumentTypes...)> {
 		static constexpr bool is_volatile = true;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
 		static constexpr bool is_noexcept = true;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const> {
+		static constexpr bool is_noexcept = true;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const noexcept> {
+		static constexpr bool is_volatile = true;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const> {
+		static constexpr bool is_volatile = true;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile noexcept>
+		: signature< ResultType(OwnerType::*)(ArgumentTypes...) volatile> {
+		static constexpr bool is_noexcept = true;
+	};
+
+	// METHODS (LVALUE ref-qual)
+
+	
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) &>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile&> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = true;
-		static constexpr bool is_noexcept = false;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const &>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile& noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = false;
-		static constexpr bool is_volatile = true;
-		static constexpr bool is_noexcept = true;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile &>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) & noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) noexcept> {
+		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const & noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const noexcept> {
+		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile & noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile noexcept> {
+		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile &>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile> {
+		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile & noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile noexcept> {
+		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
+	};
+
 	// METHODS (RVALUE ref-qual)
 
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...)&&> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = false;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = false;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...)&&>
+	: signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
 		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const&&> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = false;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const&&>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const> {
 		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) && noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = false;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = true;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile&&>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile> {
 		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const&& noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = false;
-		static constexpr bool is_noexcept = true;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) && noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) noexcept> {
 		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile&& noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = true;
-		static constexpr bool is_noexcept = true;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const&& noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const noexcept> {
 		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile&&> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = true;
-		static constexpr bool is_volatile = true;
-		static constexpr bool is_noexcept = false;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile&& noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile noexcept> {
 		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile&& noexcept> {
-		using owner_type = OwnerType;
-		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
-		static constexpr bool is_const = false;
-		static constexpr bool is_volatile = true;
-		static constexpr bool is_noexcept = true;
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile&&>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile> {
+		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
+	};
+	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile&& noexcept>
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile noexcept> {
 		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
 	};
 
@@ -238,7 +157,7 @@ namespace kelbon {
 		static constexpr bool is_noexcept = false;
 	};
 	template<typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(*)(ArgumentTypes...) noexcept > {
+	struct signature<ResultType(*)(ArgumentTypes...) noexcept> {
 		using result_type = ResultType;
 		using parameter_list = type_list<ArgumentTypes...>;
 		static constexpr bool is_noexcept = true;
@@ -246,10 +165,13 @@ namespace kelbon {
 
 	template<like_functor T>
 	struct signature<T> : signature<decltype(&T::operator())> {};
-
-	// takes pointer/reference to callable/method/lambda/FUNCTOR and gives its info
-//	template<typename T>
-//	struct signature<T> : signature<T*> {};
+	
+	// takes reference to callable/method/lambda/FUNCTOR and gives its info
+	template<typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(&)(ArgumentTypes...)> : signature<ResultType(*)(ArgumentTypes...)> {};
+	// for just type of function/ref
+	template<typename ResultType, typename ... ArgumentTypes>
+	struct signature<ResultType(ArgumentTypes...)> : signature<ResultType(*)(ArgumentTypes...)> {};
 
 	// по сути ещё элипсы сишные ... , но пошли они нахуй
 

@@ -4,6 +4,7 @@
 
 #include "test_kelbon_base.hpp"
 #include "kelbon_concepts_base.hpp"
+#include "kelbon_type_traits_functional.hpp"
 
 namespace kelbon::test {
 
@@ -35,11 +36,25 @@ namespace kelbon::test {
 		static_assert(test_value, "like_functor concept fails test");
 	}
 
+	void CallableTest() {
+		struct test_class {
+			void method(){}
+		};
+		constexpr bool test_value =
+			callable<decltype(CallableTest)> &&
+			callable<decltype(&CallableTest)> &&
+			callable<decltype(&test_class::method)> &&
+			callable<decltype([](int) -> bool { return false; })> &&
+			callable<decltype([&test_value](float) {})>;
+
+		static_assert(test_value, "callable concept fails test");
+	}
 	void TestsForConcepts() {
 		test_room tester;
 
-		tester.AddTest(&NumericTest);
-		tester.AddTest(&FunctorTest);
+		tester.AddTest(NumericTest);
+		tester.AddTest(FunctorTest);
+		tester.AddTest(CallableTest);
 
 		tester.StartTesting();
 	}

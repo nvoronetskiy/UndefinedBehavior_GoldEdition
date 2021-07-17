@@ -20,7 +20,11 @@
 
 using namespace kelbon::test;
 
+// todo - cmake for this project
+// todo - проверить на gcc
+
 int main() {
+
 	TestsForActWrapper();
 	TestsForConcepts();
 	TestsForMemoryBlock();

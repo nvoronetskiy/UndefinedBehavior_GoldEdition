@@ -73,6 +73,12 @@ namespace kelbon::test {
 		act_wrapper wrap1(&TestFunc1);
 		auto wrap2 = WrapAction(&TestFunc2);
 
+		// without reference/pointer
+		auto wrap3 = WrapAction(TestFunc1);
+		act_wrapper wrap4(TestFunc2);
+		wrap3('\0');
+		wrap4(TestFunc1);
+
 		std::list<std::unique_ptr<base_action<bool(char)>>> test_list;
 		test_list.emplace_back(new act_wrapper(wrap1));
 		if ((*test_list.front())('c') != true) {
@@ -105,10 +111,10 @@ namespace kelbon::test {
 	void TestsForActWrapper() {
 		test_room tester;
 		
-		tester.AddTest(&ActWrapperLambdasTest);
-		tester.AddTest(&ActWrapperFunctorsTest);
-		tester.AddTest(&ActWrapperFunctionsTest);
-		tester.AddTest(&ActWrapperMethodsTest);
+		tester.AddTest(ActWrapperLambdasTest);
+		tester.AddTest(ActWrapperFunctorsTest);
+		tester.AddTest(ActWrapperFunctionsTest);
+		tester.AddTest(ActWrapperMethodsTest);
 
 		tester.StartTesting();
 	}
