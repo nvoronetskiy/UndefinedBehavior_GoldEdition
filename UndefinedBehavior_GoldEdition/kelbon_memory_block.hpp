@@ -18,7 +18,7 @@ namespace kelbon {
 	// запоминает, если Condition == true и не запоминает, если условие не выполняется
 	template<typename T, bool Condition>
 	class remember_destructor : public base_remember_destructor {
-		void Destroy(void* ptr) const noexcept override { }
+		void Destroy(void* ptr) const noexcept override {}
 	};
 	template<typename T>
 	class remember_destructor<T, true> : public base_remember_destructor {
@@ -63,7 +63,7 @@ namespace kelbon {
 		}
 		memory_block(const memory_block&) = delete;
 		template<typename ... Types>
-		requires (!(is_same_v<typename type_list<Types...>::template get_element<0>, memory_block<max_size, TupleType>> && sizeof...(Types) == 1))
+		requires (!(std::is_same_v<typename type_list<Types...>::template get_element<0>, memory_block<max_size, TupleType>> && sizeof...(Types) == 1))
 		memory_block(Types&& ... args) : memory_block(TupleType<std::remove_reference_t<Types>...>(std::forward<Types>(args)...)) {}
 
 		template<size_t other_max_size>

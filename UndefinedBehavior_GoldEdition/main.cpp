@@ -6,6 +6,7 @@
 #include "test_kelbon_concepts.hpp"
 #include "test_kelbon_memory_block.hpp"
 #include "test_kelbon_act_wrapper.hpp"
+#include "test_kelbon_traits.hpp"
 
 #include "kelbon_type_traits_functional.hpp"
 #include "kelbon_memory_block.hpp"
@@ -28,6 +29,7 @@ int main() {
 	TestsForActWrapper();
 	TestsForConcepts();
 	TestsForMemoryBlock();
+	TestsForTraits();
 
 	return 0;
 }

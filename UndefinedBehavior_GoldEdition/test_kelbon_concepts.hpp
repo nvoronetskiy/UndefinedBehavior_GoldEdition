@@ -8,6 +8,11 @@
 
 namespace kelbon::test {
 
+	struct test_class {
+		void operator()() {}
+		void method() {}
+	};
+
 	void NumericTest() {
 		constexpr bool test_value =
 			numeric<int> &&
@@ -25,36 +30,75 @@ namespace kelbon::test {
 		static_assert(test_value, "numeric concept fails test");
 	}
 
-	void FunctorTest() {
-		struct test_class {
-			void operator()() {}
-		};
+	void LikeFunctorTest() {
+		test_class{}();
 		struct no_functor {};
 
-		constexpr bool test_value = like_functor<test_class> && !like_functor<no_functor>;
+		constexpr bool test_value =
+			like_functor<test_class> &&
+			!like_functor<no_functor> &&
+			!like_functor<decltype(&test_class::operator())>;
 
 		static_assert(test_value, "like_functor concept fails test");
 	}
 
 	void CallableTest() {
-		struct test_class {
-			void method(){}
-		};
 		constexpr bool test_value =
 			callable<decltype(CallableTest)> &&
 			callable<decltype(&CallableTest)> &&
 			callable<decltype(&test_class::method)> &&
 			callable<decltype([](int) -> bool { return false; })> &&
-			callable<decltype([&test_value](float) {})>;
+			callable<decltype([&test_value](float) { return test_value; }) > ;
 
 		static_assert(test_value, "callable concept fails test");
 	}
+
+	void FunctorTest() {
+		struct no_functor {};
+		constexpr bool test_value =
+			functor<decltype([]() mutable noexcept { return false; }) > &&
+			functor<test_class> && !functor<no_functor> &&
+			functor<decltype([&test_value](float) { return test_value; }) > &&
+			!functor<decltype(&FunctorTest)> &&
+			!functor<int> &&
+			!functor<decltype(&test_class::operator())>;
+
+		static_assert(test_value, "functor concept failes test");
+	}
+
+	void MethodTest() {
+		constexpr bool test_value =
+			method<decltype(&test_class::method)> &&
+			method<decltype(&test_class::operator())> &&
+			method<decltype(&test_room::AddTest<decltype(&MethodTest)>)> &&
+			!method<decltype([]() {})> &&
+			!method<decltype(MethodTest)> &&
+			!method<decltype(&MethodTest)> &&
+			!method<void*>;
+
+		static_assert(test_value, "method concept fails test");
+	}
+
+	void FunctionTest() {
+		constexpr bool test_value =
+			function<decltype(FunctionTest)> &&
+			!function<decltype([]() mutable {}) > &&
+			function<decltype(&test_class::method)> && // методы это частный случай функций
+			function<void(float, double)> &&
+			!function<void>; 
+
+		static_assert(test_value, "method concept fails test");
+	}
+
 	void TestsForConcepts() {
 		test_room tester;
 
 		tester.AddTest(NumericTest);
-		tester.AddTest(FunctorTest);
+		tester.AddTest(LikeFunctorTest);
 		tester.AddTest(CallableTest);
+		tester.AddTest(FunctorTest);
+		tester.AddTest(MethodTest);
+		tester.AddTest(FunctionTest);
 
 		tester.StartTesting();
 	}

@@ -12,8 +12,8 @@ namespace kelbon::test {
 
 	void ActWrapperLambdasTest() {
 		// протестировать для всех возможных штук + возможность полиморфного использования
-		act_wrapper wrap1([](int iv, float fv) { return iv + fv; });
-		auto wrap2 = WrapAction([](int iv, float fv) { return iv + fv; });
+		act_wrapper wrap1([](int iv, float fv) { return static_cast<float>(iv) + fv; });
+		auto wrap2 = WrapAction([](int iv, float fv) { return static_cast<float>(iv) + fv; });
 
 		if (wrap1(10, 20) != 30.f || wrap2(10, 20) != 30.f) {
 			throw test_failed("act_wrapper do not work for lambda without capture");
@@ -21,8 +21,8 @@ namespace kelbon::test {
 		int iv = 10;
 		float fv = 10.f;
 
-		act_wrapper wrap3([iv, &fv](int mul, float = 0.f) {return (iv + fv) * mul; });
-		auto wrap4 = WrapAction([iv, &fv](int mul) {return (iv + fv) * mul; });
+		act_wrapper wrap3([iv, &fv](int mul, float = 0.f) {return (static_cast<float>(iv) + fv) * static_cast<float>(mul); });
+		auto wrap4 = WrapAction([iv, &fv](int mul) {return (static_cast<float>(iv) + fv) * static_cast<float>(mul); });
 		if (wrap3(3,0.f) != 60.f || wrap4(3) != 60.f) {
 			throw test_failed("act_wrapped do not work for lambda with capture");
 		}
@@ -30,13 +30,13 @@ namespace kelbon::test {
 
 		auto m = act_wrapper(wrap3);
 		test_list.emplace_back(new act_wrapper(wrap1));
-		test_list.emplace_back(new act_wrapper([](int iv, float fv) { return iv + fv; }));
+		test_list.emplace_back(new act_wrapper([](int iv, float fv) { return static_cast<float>(iv) + fv; }));
 		test_list.emplace_back(new act_wrapper(std::move(wrap3)));
-		test_list.emplace_back(new act_wrapper([iv, &fv](int mul, float) {return (iv + fv) * mul; }));
+		test_list.emplace_back(new act_wrapper([iv, &fv](int mul, float) {return (static_cast<float>(iv) + fv) * static_cast<float>(mul); }));
 
 		int result = 0;
 		for (auto& func : test_list) {
-			result += static_cast<float>((*func)(2, 3.f)); // 5 + 5 + 40 + 40
+			result += static_cast<int>((*func)(2, 3.f)); // 5 + 5 + 40 + 40
 		}
 		if (result != 90) {
 			throw test_failed("act_wrapper calls bad");
@@ -62,7 +62,7 @@ namespace kelbon::test {
 		}
 	}
 
-	bool TestFunc1(char v) {
+	bool TestFunc1([[maybe_unused]] char v) {
 		return true;
 	}
 	using TestUsing = bool(*)(char);

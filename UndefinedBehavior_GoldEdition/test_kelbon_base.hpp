@@ -8,7 +8,6 @@
 
 #include "kelbon_concepts_functional.hpp"
 #include "kelbon_template_base_class.hpp"
-#include "kelbon_memory_block.hpp"
 
 namespace kelbon::test {
 	

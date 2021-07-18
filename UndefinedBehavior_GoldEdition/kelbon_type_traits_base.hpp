@@ -15,31 +15,18 @@ namespace kelbon {
 
 	// TEMPLATE ADD_RVALUE_REFERENCE
 	template<typename T>
-	struct add_rvalue_reference;
+	struct create_rvalue_reference;
 	template<typename T>
-	struct add_rvalue_reference { using type = T&&; };
+	struct create_rvalue_reference { using type = T&&; };
 	template<typename T>
-	struct add_rvalue_reference<T&> { using type = T&&; };
+	struct create_rvalue_reference<T&> { using type = T&&; };
 
 	template<typename T>
-	using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
-
-	// TEMPLATE FUNCTION DECLVAL
-	template<typename T>
-	add_rvalue_reference_t<T> declval() noexcept;
+	using create_rvalue_reference_t = typename create_rvalue_reference<T>::type;
 
 	// TEMPLATE ALIAS ref_to_func_which_returns. Used for concepts as an analogue of declval template 
 	template<typename T>
-	using ref_to_func_which_returns = add_rvalue_reference_t<T>(*)();
-
-	// TEMPLATE REMOVE_POINTER
-	template<typename T>
-	struct remove_pointer { using type = T; };
-	template<typename T>
-	struct remove_pointer<T*> { using type = T; };
-
-	template<typename T>
-	using remove_pointer_t = typename remove_pointer<T>::type;
+	using ref_to_func_which_returns = create_rvalue_reference_t<T>(*)();
 
 	// TEMPLATE CONDITIONAL
 	template<bool Condition, typename T, typename U>
@@ -49,15 +36,6 @@ namespace kelbon {
 
 	template<bool Condition, typename T, typename U>
 	using conditional_t = typename conditional<Condition, T, U>::type;
-
-	// TEMPLATE IS_SAME
-	template<typename T, typename U>
-	struct is_same  : false_type {};
-	template<typename T>
-	struct is_same<T, T> : true_type {};
-
-	template<typename T, typename U>
-	constexpr inline bool is_same_v = is_same<T, U>::value;
 
 	// TEMPLATE DECAY
 	template<typename T>
@@ -72,6 +50,8 @@ namespace kelbon {
 	struct decay<const T> { using type = typename decay<T>::type; };
 	template<typename T>
 	struct decay<volatile T> { using type = typename decay<T>::type; };
+	template<typename T> // const and volatile have same priority, so for decay<const volatile T> ambigious const or volatile specialization it needs
+	struct decay<const volatile T> { using type = typename decay<T>::type; };
 
 	template<typename T>
 	using decay_t = typename decay<T>::type;

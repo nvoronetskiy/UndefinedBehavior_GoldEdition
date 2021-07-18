@@ -161,6 +161,7 @@
     <ClInclude Include="kelbon_utility.hpp" />
     <ClInclude Include="test_kelbon_concepts.hpp" />
     <ClInclude Include="test_kelbon_memory_block.hpp" />
+    <ClInclude Include="test_kelbon_traits.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

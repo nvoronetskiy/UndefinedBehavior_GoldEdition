@@ -113,25 +113,7 @@ namespace kelbon {
 		// тут просто передача полномочий на всё tuple_base, потому что там раскрыт пак индексов позволяющий красиво всё писать
 		using base_t = tuple_base<make_value_list<size_t, sizeof...(Types)>, Types...>;
 	public:
-		constexpr tuple()
-			noexcept(std::is_nothrow_default_constructible_v<base_t>)
-			: base_t() {
-			static_assert(((std::is_default_constructible_v<Types>) && ...));
-		}
-		template<typename ... Args> requires (((std::constructible_from<Types, Args>) && ...))
-		constexpr tuple(Args&& ... args)
-			noexcept(std::is_nothrow_constructible_v<base_t, Args...>)
-			: base_t(std::forward<Args>(args)...)
-		{}
-
-		constexpr tuple(const tuple& other)
-			noexcept(std::is_nothrow_copy_constructible_v<base_t>) : base_t(other)
-		{}
-		constexpr tuple(tuple&& other)
-			noexcept(std::is_nothrow_move_constructible_v<base_t>) : base_t(std::move(other))
-		{}
-
-		constexpr ~tuple() = default;
+		using base_t::base_t;
 	};
 	
 	// deduction guide

@@ -46,6 +46,10 @@ namespace kelbon {
 	private:
 		Actor F;
 	public:
+		constexpr act_wrapper() noexcept(std::is_nothrow_default_constructible_v<Actor>) = default;
+		constexpr act_wrapper& operator=(const act_wrapper&) noexcept(std::is_nothrow_copy_assignable_v<Actor>) = default;
+		constexpr act_wrapper& operator=(act_wrapper&&) noexcept(std::is_nothrow_move_assignable_v<Actor>) = default;
+
 		constexpr act_wrapper(const Actor& actor)
 			noexcept(std::is_nothrow_copy_constructible_v<Actor>)
 			: F(actor)
@@ -74,6 +78,10 @@ namespace kelbon {
 	private:
 		mutable Actor F; // может быть ситуация, когда здесь хранится функтор с non-const operator(), а значит эта штука может измениться
 	public:
+		constexpr act_wrapper() noexcept(std::is_nothrow_default_constructible_v<Actor>) = default;
+		constexpr act_wrapper& operator=(const act_wrapper&) noexcept(std::is_nothrow_copy_assignable_v<Actor>) = default;
+		constexpr act_wrapper& operator=(act_wrapper&&) noexcept(std::is_nothrow_move_assignable_v<Actor>) = default;
+
 		constexpr act_wrapper(const Actor& actor)
 			noexcept(std::is_nothrow_copy_constructible_v<Actor>)
 			: F(actor)
@@ -105,6 +113,10 @@ namespace kelbon {
 	private:
 		Actor F;
 	public:
+		constexpr act_wrapper() noexcept(std::is_nothrow_default_constructible_v<Actor>) = default;
+		constexpr act_wrapper& operator=(const act_wrapper&) noexcept(std::is_nothrow_copy_assignable_v<Actor>) = default;
+		constexpr act_wrapper& operator=(act_wrapper&&) noexcept(std::is_nothrow_move_assignable_v<Actor>) = default;
+
 		constexpr act_wrapper(const Actor& actor)
 			noexcept(std::is_nothrow_copy_constructible_v<Actor>)
 			: F(actor)

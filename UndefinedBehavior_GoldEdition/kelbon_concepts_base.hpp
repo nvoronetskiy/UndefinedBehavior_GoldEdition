@@ -2,8 +2,9 @@
 #ifndef KELBON_CONCEPTS_BASE_HPP
 #define KELBON_CONCEPTS_BASE_HPP
 
-#include "kelbon_type_traits_functional.hpp"
 #include <concepts>
+
+#include "kelbon_concepts_functional.hpp"
 
 namespace kelbon {
 	// for situatuions like requires { { expression } -> exist }; 
@@ -28,13 +29,13 @@ namespace kelbon {
 		// CONCEPT returns (checking result type of the callable)
 		template<typename Func, typename ResultType>
 		concept returns = callable<Func> && requires {
-			{ declval<typename signature<Func>::result_type>() }->std::same_as<ResultType>;
+			{ std::declval<typename signature<Func>::result_type>() }->std::same_as<ResultType>;
 		};
 
 		// CONCEPT accepts
 		template<typename Func, typename ... Types>
 		concept accepts = callable<Func> && requires {
-			{ declval<typename signature<Func>::result_type>() }->std::same_as<type_list<Types...>>;
+			{ std::declval<typename signature<Func>::result_type>() }->std::same_as<type_list<Types...>>;
 		};
 
 	} // namespace func

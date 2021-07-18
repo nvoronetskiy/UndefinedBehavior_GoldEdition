@@ -68,5 +68,8 @@
     <ClInclude Include="test_kelbon_act_wrapper.hpp">
       <Filter>Tests</Filter>
     </ClInclude>
+    <ClInclude Include="test_kelbon_traits.hpp">
+      <Filter>Tests</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
