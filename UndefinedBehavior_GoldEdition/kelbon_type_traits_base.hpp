@@ -37,7 +37,7 @@ namespace kelbon {
 	template<bool Condition, typename T, typename U>
 	using conditional_t = typename conditional<Condition, T, U>::type;
 
-	// TEMPLATE DECAY
+	// TEMPLATE DECAY (not same std::decay)
 	template<typename T>
 	struct decay { using type = T; };
 	template<typename T>
@@ -52,6 +52,12 @@ namespace kelbon {
 	struct decay<volatile T> { using type = typename decay<T>::type; };
 	template<typename T> // const and volatile have same priority, so for decay<const volatile T> ambigious const or volatile specialization it needs
 	struct decay<const volatile T> { using type = typename decay<T>::type; };
+	template<typename T>
+	struct decay<T[]> { using type = typename decay<T>::type; };
+	template<typename T>
+	struct decay<const T[]> { using type = typename decay<T>::type; };
+	template<typename T>
+	struct decay<const volatile T[]> { using type = typename decay<T>::type; };
 
 	template<typename T>
 	using decay_t = typename decay<T>::type;

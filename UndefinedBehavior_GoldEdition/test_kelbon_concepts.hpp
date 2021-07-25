@@ -13,7 +13,7 @@ namespace kelbon::test {
 		void method() {}
 	};
 
-	void NumericTest() {
+	inline void NumericTest() {
 		constexpr bool test_value =
 			numeric<int> &&
 			numeric<unsigned long> &&
@@ -30,7 +30,7 @@ namespace kelbon::test {
 		static_assert(test_value, "numeric concept fails test");
 	}
 
-	void LikeFunctorTest() {
+	inline void LikeFunctorTest() {
 		test_class{}();
 		struct no_functor {};
 
@@ -42,7 +42,7 @@ namespace kelbon::test {
 		static_assert(test_value, "like_functor concept fails test");
 	}
 
-	void CallableTest() {
+	inline void CallableTest() {
 		constexpr bool test_value =
 			callable<decltype(CallableTest)> &&
 			callable<decltype(&CallableTest)> &&
@@ -53,7 +53,7 @@ namespace kelbon::test {
 		static_assert(test_value, "callable concept fails test");
 	}
 
-	void FunctorTest() {
+	inline void FunctorTest() {
 		struct no_functor {};
 		constexpr bool test_value =
 			functor<decltype([]() mutable noexcept { return false; }) > &&
@@ -66,7 +66,7 @@ namespace kelbon::test {
 		static_assert(test_value, "functor concept failes test");
 	}
 
-	void MethodTest() {
+	inline void MethodTest() {
 		constexpr bool test_value =
 			method<decltype(&test_class::method)> &&
 			method<decltype(&test_class::operator())> &&
@@ -79,7 +79,7 @@ namespace kelbon::test {
 		static_assert(test_value, "method concept fails test");
 	}
 
-	void FunctionTest() {
+	inline void FunctionTest() {
 		constexpr bool test_value =
 			function<decltype(FunctionTest)> &&
 			!function<decltype([]() mutable {}) > &&
@@ -90,7 +90,7 @@ namespace kelbon::test {
 		static_assert(test_value, "method concept fails test");
 	}
 
-	void TestsForConcepts() {
+	inline void TestsForConcepts() {
 		test_room tester;
 
 		tester.AddTest(NumericTest);

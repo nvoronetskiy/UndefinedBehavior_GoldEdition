@@ -186,6 +186,14 @@ namespace kelbon {
 		return signature<decltype(&decltype(x)::operator())>{};
 	}
 
+	namespace func {
+		template<typename F>
+		using result_type = typename signature<F>::result_type;
+
+		template<typename F>
+		using parameter_list = typename signature<F>::parameter_list;
+	} // namespace func
+
 	// Need real value, so declval is not working here(not a problem for functors, use {} for initialization
 	// or signature template or get_function_signature callable...)
 	// lambdas with capture have no default constructor, so you cant use it for them, but can use signature<T>

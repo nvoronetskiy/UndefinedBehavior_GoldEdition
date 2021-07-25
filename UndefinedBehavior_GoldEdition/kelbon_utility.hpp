@@ -12,7 +12,8 @@ namespace kelbon {
 
 	// TEMPLATE FUNCTION always_false FOR STATIC ASSERTS (for example)
 	consteval inline bool always_false(auto) noexcept { return false; }
-
+	template<typename T>
+	consteval inline bool always_false() noexcept { return false; }
 } // namespace kelbon
 
 #endif // !KELBON_UTILITY_HPP

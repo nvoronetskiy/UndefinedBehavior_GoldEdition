@@ -78,6 +78,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>false</EnableClangTidyCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -148,7 +150,9 @@
   <ItemGroup>
     <ClInclude Include="kelbon_concepts_base.hpp" />
     <ClInclude Include="kelbon_concepts_functional.hpp" />
+    <ClInclude Include="kelbon_action.hpp" />
     <ClInclude Include="kelbon_template_base_class.hpp" />
+    <ClInclude Include="test_kelbon_action.hpp" />
     <ClInclude Include="test_kelbon_act_wrapper.hpp" />
     <ClInclude Include="test_kelbon_base.hpp" />
     <ClInclude Include="kelbon_tuple.hpp" />

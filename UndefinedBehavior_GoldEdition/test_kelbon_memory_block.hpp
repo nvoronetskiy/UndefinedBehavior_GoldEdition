@@ -11,7 +11,7 @@
 
 namespace kelbon::test {
 	
-	void MemoryBlockTest() {
+	inline void MemoryBlockTest() {
 		int x = 10;
 		std::vector<char> vect(100, 'c');
 		std::string str("some string");
@@ -19,7 +19,7 @@ namespace kelbon::test {
 		memory_block<200> block(x, vect, str, 266.f);
 
 		try {
-			auto [a, b, c, d] = block.SafeGetDataAs<int, std::vector<char>, std::string, float>();
+			auto& [a, b, c, d] = block.SafeGetDataAs<int, std::vector<char>, std::string, float>();
 
 			if (a != x || b.size() != 100 || str != "some string" || d != 266.f) {
 				throw test_failed("memory block GetDataAs works wrong");
@@ -54,7 +54,7 @@ namespace kelbon::test {
 		}
 	}
 
-	void MemoryBlockDestroyTest() {
+	inline void MemoryBlockDestroyTest() {
 		struct delete_checker {
 			bool was_deleted = false;
 			void operator++(int) {
@@ -81,7 +81,7 @@ namespace kelbon::test {
 		tester.v = nullptr;
 	}
 
-	void TestsForMemoryBlock() {
+	inline void TestsForMemoryBlock() {
 		test_room tester;
 		tester.AddTest(MemoryBlockTest);
 		tester.AddTest(MemoryBlockDestroyTest);

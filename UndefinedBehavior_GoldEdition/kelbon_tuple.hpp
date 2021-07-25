@@ -10,40 +10,35 @@
 // todo - специализация memory_block для последовательности типов, которая в себя будет включать просто memory_block от размера, подходящего для типов
 // и там сделать deduction guide для конструктора от списка типов, чтобы писать просто значения, вместо tuple{....}
 
+
 namespace kelbon {
 
 	template<typename T, size_t index>
 	struct value_in_tuple {
-		constexpr value_in_tuple()
-			noexcept(std::is_nothrow_default_constructible_v<T>)
-			: value()
-		{}
-		// опять проверка, чтобы не перекрывало move конструктор(хотя казалось бы и не должно...)
-		template<typename U> requires (!std::same_as<U, value_in_tuple<T, index>>)
-		constexpr value_in_tuple(U&& v)
-			noexcept(std::is_nothrow_constructible_v<T, U>)
-			: value(std::forward<U>(v))
-		{}
-		constexpr value_in_tuple(const value_in_tuple& other)
+		constexpr value_in_tuple() noexcept(std::is_nothrow_default_constructible_v<T>) = default;
+
+		constexpr value_in_tuple(const T& value)
 			noexcept(std::is_nothrow_copy_constructible_v<T>)
-			: value(other.value)
+			requires(std::is_copy_constructible_v<T>)
+			: value(value)
 		{}
-		constexpr value_in_tuple(value_in_tuple&& other)
+
+		constexpr value_in_tuple(T&& value)
 			noexcept(std::is_nothrow_move_constructible_v<T>)
-			: value(std::move(other.value))
+			//requires(!std::is_reference_v<T>) // для ссылок совпадает с конструктором копирования()
+			: value(std::forward<T>(value))
 		{}
+		constexpr value_in_tuple(const value_in_tuple&)
+			noexcept(std::is_nothrow_copy_constructible_v<T>)
+			requires(std::is_copy_constructible_v<T>) = default;
+
+		constexpr value_in_tuple(value_in_tuple&&) noexcept(std::is_nothrow_move_constructible_v<T>) = default;
+
 		constexpr value_in_tuple& operator=(const value_in_tuple& other)
-			noexcept(std::is_nothrow_copy_assignable_v<T>) {
+			noexcept(std::is_nothrow_copy_assignable_v<T>)
+			requires(std::is_copy_constructible_v<T>) = default;
 
-			value = other.value;
-			return *this;
-		}
-		constexpr value_in_tuple& operator=(value_in_tuple&& other)
-			noexcept(std::is_nothrow_move_assignable_v<T>) {
-
-			value = std::move(other.value);
-			return *this;
-		}
+		constexpr value_in_tuple& operator=(value_in_tuple&& other) noexcept(std::is_nothrow_move_assignable_v<T>) = default;
 
 		constexpr ~value_in_tuple() = default;
 		// есть вероятность, что здесь можно добавить operator spaceship <=>
@@ -66,10 +61,18 @@ namespace kelbon {
 			noexcept(((std::is_nothrow_default_constructible_v<Types>) && ...))
 			: value_in_tuple<Types, Indexes>()...
 		{}
-
-		// казалось бы, что проверять второй раз здесь не нужно(requires), но если не проверить,
-		// то этот конструктор "закрывает" собой move конструктор
-		template<typename ... Args> requires (((std::constructible_from<Types, Args>) && ...))
+		constexpr tuple_base(const tuple_base& other)
+			noexcept(((std::is_nothrow_copy_constructible_v<Types>) && ...))
+			requires(std::is_copy_constructible_v<Types> && ...) // чтобы один удалённый конструктор копирования не ломал компиляцию
+			: value_in_tuple<Types, Indexes>(other.get<Indexes>())...
+		{}
+		constexpr tuple_base(tuple_base&& other)
+			noexcept(((std::is_nothrow_move_constructible_v<Types>) && ...))
+			: value_in_tuple<Types, Indexes>(std::move(other.get<Indexes>()))...
+		{}
+		// избегание перекрытия других конструкторов, в том числе мув/копи
+		template<typename ... Args>
+		requires(sizeof...(Args) == sizeof...(Types))
 		constexpr tuple_base(Args&& ... args)
 			noexcept(((std::is_nothrow_constructible_v<Types, Args>) && ...))
 			: value_in_tuple<Types, Indexes>(std::forward<Args>(args))...
@@ -84,17 +87,8 @@ namespace kelbon {
 			return static_cast<value_in_tuple<get_type<index>, index>*>(this)->value;
 		}
 
-		constexpr tuple_base(const tuple_base& other)
-			noexcept(((std::is_nothrow_copy_constructible_v<Types>) && ...))
-			: value_in_tuple<Types, Indexes>(other.get<Indexes>())...
-		{}
-		constexpr tuple_base(tuple_base&& other)
-			noexcept(((std::is_nothrow_move_constructible_v<Types>) && ...))
-			: value_in_tuple<Types, Indexes>(std::move(other.get<Indexes>()))...
-		{}
 		constexpr tuple_base& operator=(const tuple_base& other)
 			noexcept(((std::is_nothrow_copy_constructible_v<Types>) && ...)) {
-
 			((this->template get<Indexes>() = other.template get<Indexes>()), ...);
 			return *this;
 		}

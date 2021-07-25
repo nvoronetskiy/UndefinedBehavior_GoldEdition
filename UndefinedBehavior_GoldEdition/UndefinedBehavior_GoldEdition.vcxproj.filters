@@ -71,5 +71,11 @@
     <ClInclude Include="test_kelbon_traits.hpp">
       <Filter>Tests</Filter>
     </ClInclude>
+    <ClInclude Include="kelbon_action.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="test_kelbon_action.hpp">
+      <Filter>Tests</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -4,13 +4,14 @@
 
 #include <memory>
 #include <list>
+#include <thread>
 
 #include "test_kelbon_base.hpp"
 #include "kelbon_template_base_class.hpp"
 
 namespace kelbon::test {
 
-	void ActWrapperLambdasTest() {
+	inline void ActWrapperLambdasTest() {
 		// протестировать для всех возможных штук + возможность полиморфного использования
 		act_wrapper wrap1([](int iv, float fv) { return static_cast<float>(iv) + fv; });
 		auto wrap2 = WrapAction([](int iv, float fv) { return static_cast<float>(iv) + fv; });
@@ -21,6 +22,8 @@ namespace kelbon::test {
 		int iv = 10;
 		float fv = 10.f;
 
+		std::thread thr(wrap2, 10, 20);
+		thr.join();
 		act_wrapper wrap3([iv, &fv](int mul, float = 0.f) {return (static_cast<float>(iv) + fv) * static_cast<float>(mul); });
 		auto wrap4 = WrapAction([iv, &fv](int mul) {return (static_cast<float>(iv) + fv) * static_cast<float>(mul); });
 		if (wrap3(3,0.f) != 60.f || wrap4(3) != 60.f) {
@@ -43,7 +46,7 @@ namespace kelbon::test {
 		}
 	}
 
-	void ActWrapperFunctorsTest() {
+	inline void ActWrapperFunctorsTest() {
 		struct functor {
 			functor() = default;
 			size_t operator()(int value) {
@@ -62,14 +65,14 @@ namespace kelbon::test {
 		}
 	}
 
-	bool TestFunc1([[maybe_unused]] char v) {
+	inline bool TestFunc1([[maybe_unused]] char v) {
 		return true;
 	}
 	using TestUsing = bool(*)(char);
-	bool TestFunc2(TestUsing fn) {
+	inline bool TestFunc2(TestUsing fn) {
 		return fn('c');
 	}
-	void ActWrapperFunctionsTest() {
+	inline void ActWrapperFunctionsTest() {
 		act_wrapper wrap1(&TestFunc1);
 		auto wrap2 = WrapAction(&TestFunc2);
 
@@ -89,7 +92,7 @@ namespace kelbon::test {
 		}
 	}
 
-	void ActWrapperMethodsTest() {
+	inline void ActWrapperMethodsTest() {
 		struct test_me {
 			int method(int f) {
 				return f * 2;
@@ -108,7 +111,7 @@ namespace kelbon::test {
 		}
 	}
 
-	void TestsForActWrapper() {
+	inline void TestsForActWrapper() {
 		test_room tester;
 		
 		tester.AddTest(ActWrapperLambdasTest);

@@ -13,7 +13,7 @@
 
 namespace kelbon::test {
 	using std::same_as;
-	void CreateRvalueRefTest() {
+	inline void CreateRvalueRefTest() {
 		constexpr bool test_value =
 			same_as<int&&, create_rvalue_reference_t<int>> &&
 			same_as<int&&, create_rvalue_reference_t<int&>> &&
@@ -25,7 +25,7 @@ namespace kelbon::test {
 		static_assert(test_value, "create_rvalue_reference test failed");
 	}
 
-	void ConditionalTest() {
+	inline void ConditionalTest() {
 		constexpr bool test_value =
 			same_as<float, conditional_t<false, int, float>> &&
 			same_as<int, conditional_t<true, int, float>>;
@@ -33,7 +33,7 @@ namespace kelbon::test {
 		static_assert(test_value, "conditional test failed");
 	}
 
-	void DecayTest() {
+	inline void DecayTest() {
 		constexpr bool test_value =
 			same_as<int, decay_t<const volatile int*****>> &&
 			same_as<char, decay_t<char&&>> &&
@@ -43,22 +43,25 @@ namespace kelbon::test {
 			same_as<char, decay_t<const char&>> &&
 			same_as<char, decay_t<const char* const>> &&
 			same_as<char, decay_t<const char&&>> &&
-			same_as<char, decay_t<const char&>>;
+			same_as<char, decay_t<const char&>> &&
+			same_as<char, decay_t<const volatile char[]>>;
 
 		static_assert(test_value, "decay test failed");
 	}
 
-	void SignatureTest() {
+	inline void SignatureTest() {
 		constexpr bool test_value =
 			!function_info<DecayTest>::is_noexcept &&
 			same_as<function_info<DecayTest>::parameter_list, type_list<>> &&
 			same_as<void, function_info<DecayTest>::result_type> &&
-			same_as<typename function_info<[](float, int) {return true; }>::parameter_list, type_list<float, int>>;
+			same_as<typename function_info<[](float, int) { return true; }>::parameter_list, type_list<float, int>> &&
+			// lambdas with capture have no default constructor, so it cant be sended into function_info like template parameter
+			same_as<typename signature<decltype([test_value](float) {return true; })>::parameter_list, type_list<float>>;
 
 		static_assert(test_value, "signature trait fails test");
 	}
 
-	void TestsForTraits() {
+	inline void TestsForTraits() {
 		test_room tester;
 
 		tester.AddTest(CreateRvalueRefTest);

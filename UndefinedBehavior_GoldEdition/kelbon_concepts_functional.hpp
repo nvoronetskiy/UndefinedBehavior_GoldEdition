@@ -3,6 +3,7 @@
 #ifndef KELBON_CONCEPTS_FUNCTIONAL_HPP
 #define KELBON_CONCEPTS_FUNCTIONAL_HPP
 
+#include <concepts>
 #include "kelbon_type_traits_functional.hpp"
 
 namespace kelbon {
@@ -32,6 +33,16 @@ namespace kelbon {
 		signature<Applicant>::is_volatile;
 		signature<Applicant>::ref_qualification;
 	};
+
+	namespace func {
+		// CONCEPT returns (checking result type of the callable)
+		template<typename Func, typename ResultType>
+		concept returns = callable<Func> && std::same_as<typename signature<Func>::result_type, ResultType>;
+
+		// CONCEPT accepts
+		template<typename Func, typename ... Types>
+		concept accepts = callable<Func> && std::same_as<typename signature<Func>::parameter_list, type_list<Types...>>;
+	} // namespace func
 
 } // namespace kelbon
 
