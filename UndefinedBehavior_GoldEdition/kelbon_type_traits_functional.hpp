@@ -18,11 +18,12 @@ namespace kelbon {
 
 	// METHODS (no ref-qual)
 
+	// для методов, нужен явный this
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
 	struct signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
 		using owner_type = OwnerType;
 		using result_type = ResultType;
-		using parameter_list = type_list<ArgumentTypes...>;
+		using parameter_list = type_list<OwnerType*, ArgumentTypes...>;
 		static constexpr bool is_const = false;
 		static constexpr bool is_volatile = false;
 		static constexpr bool is_noexcept = false;
@@ -167,8 +168,33 @@ namespace kelbon {
 		static constexpr bool is_noexcept = true;
 	};
 
+	namespace detail {
+		template<typename T>
+		struct remove_first_arg;
+
+		template<template<typename...> typename T, typename First, typename ... Types>
+		struct remove_first_arg<T<First, Types...>> {
+			using type = T<Types...>;
+		};
+
+		template<typename T>
+		using remove_first_arg_t = typename remove_first_arg<T>::type;
+
+	} // namespace detail
+
 	template<like_functor T>
-	struct signature<T> : signature<decltype(&T::operator())> {};
+	struct signature<T> {
+	private:
+		using base_t = signature<decltype(&T::operator())>;
+	public:
+		using owner_type = T;
+		using result_type = typename base_t::result_type;
+		using parameter_list = typename detail::remove_first_arg_t<typename base_t::parameter_list>;
+		static constexpr bool is_const = base_t::is_const;
+		static constexpr bool is_volatile = base_t::is_volatile;
+		static constexpr bool is_noexcept = base_t::is_noexcept;
+		static constexpr ref_qual ref_qualification = base_t::ref_qualification;
+	};
 	
 	// takes reference to callable/method/lambda/FUNCTOR and gives its info
 	template<typename ResultType, typename ... ArgumentTypes>
@@ -182,9 +208,9 @@ namespace kelbon {
 	consteval auto get_function_signature(auto x) noexcept {
 		return signature<decltype(x)>{};
 	}
-	consteval auto get_function_signature(like_functor auto x) noexcept {
-		return signature<decltype(&decltype(x)::operator())>{};
-	}
+	//consteval auto get_function_signature(like_functor auto x) noexcept {
+	//	return signature<decltype(&decltype(x)::operator())>{};
+	//}
 
 	namespace func {
 		template<typename F>

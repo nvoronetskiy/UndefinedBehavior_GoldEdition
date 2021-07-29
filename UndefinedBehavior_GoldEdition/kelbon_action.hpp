@@ -22,17 +22,26 @@ namespace kelbon {
 		virtual ResultType CallByMemory(memory_block<55>& block, ArgTypes ... args) const override {
 			if constexpr (!functor<Actor>) {
 				const auto& [invocable] = block.GetDataAs<Actor>();
-				return invocable(std::forward<std::remove_reference_t<ArgTypes>>(args)...);
+				return invocable(args...);
 			} // non const, so its mutable lambda or functor with no const operator()
 			else if constexpr (!signature<Actor>::is_const) {
 				// всё равно будет компилироваться, нужно обернуть в какую то штуку, например always_int<Actor>(...)
 				auto& [invocable] = block.GetDataAs<Actor>();
-				return invocable(std::forward<std::remove_reference_t<ArgTypes>>(args)...);
+				return invocable(args...);
 			}
 			else {
 				const auto& [invocable] = block.GetDataAs<Actor>();
-				return invocable(std::forward<std::remove_reference_t<ArgTypes>>(args)...);
+				return invocable(args...);
 			}
+		}
+	};
+	// TODO - остановился добавив это
+	template<method Actor, typename ResultType, typename OwnerPtrType, typename ... ArgTypes>
+	struct remember_call<Actor, ResultType, type_list<OwnerPtrType, ArgTypes...>>
+		: base_remember_call<ResultType, OwnerPtrType, ArgTypes...> {
+		virtual ResultType CallByMemory(memory_block<55>& block, OwnerPtrType owner_this, ArgTypes ... args) const override {
+			const auto& [invocable] = block.GetDataAs<ResultType(std::remove_pointer_t<OwnerPtrType>::*)(ArgTypes...)>();
+			return ((*owner_this).*invocable)(args...);
 		}
 	};
 
@@ -60,7 +69,7 @@ namespace kelbon {
 		// interesting forward here... ArgTypes may be reference, but forward<T&> ill formed
 		ResultType Call(ArgTypes... args) const {
 			return reinterpret_cast<const base_remember_call<ResultType, ArgTypes...>*>
-				(&invoker)->CallByMemory(memory, std::forward<std::remove_reference_t<ArgTypes>>(args)...);
+				(&invoker)->CallByMemory(memory, args...);
 		}
 	public:
 		constexpr action()
@@ -131,7 +140,7 @@ namespace kelbon {
 			if (Empty()) {
 				throw empty_function_call("You called an empty function, kelbon::action operator()");
 			}
-			return Call(std::forward<std::remove_reference_t<ArgTypes>>(args)...);
+			return Call(args...);
 		}
 	};
 

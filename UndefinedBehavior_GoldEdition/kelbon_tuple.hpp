@@ -26,7 +26,7 @@ namespace kelbon {
 		constexpr value_in_tuple(T&& value)
 			noexcept(std::is_nothrow_move_constructible_v<T>)
 			//requires(!std::is_reference_v<T>) // для ссылок совпадает с конструктором копирования()
-			: value(std::forward<T>(value))
+			: value(std::move(value))
 		{}
 		constexpr value_in_tuple(const value_in_tuple&)
 			noexcept(std::is_nothrow_copy_constructible_v<T>)
@@ -64,13 +64,13 @@ namespace kelbon {
 		constexpr tuple_base(const tuple_base& other)
 			noexcept(((std::is_nothrow_copy_constructible_v<Types>) && ...))
 			requires(std::is_copy_constructible_v<Types> && ...) // чтобы один удалённый конструктор копирования не ломал компиляцию
-			: value_in_tuple<Types, Indexes>(other.get<Indexes>())...
+			: value_in_tuple<Types, Indexes>(other.template get<Indexes>())...
 		{}
 		constexpr tuple_base(tuple_base&& other)
 			noexcept(((std::is_nothrow_move_constructible_v<Types>) && ...))
-			: value_in_tuple<Types, Indexes>(std::move(other.get<Indexes>()))...
+			: value_in_tuple<Types, Indexes>(std::move(other.template get<Indexes>()))...
 		{}
-		// избегание перекрытия других конструкторов, в том числе мув/копи
+		// избегание перекрытия других конструкторов, в том числе мув/копи, т.к. видимо из-за requires он выигрывает перегрузку у мув конструктора
 		template<typename ... Args>
 		requires(sizeof...(Args) == sizeof...(Types))
 		constexpr tuple_base(Args&& ... args)
@@ -86,16 +86,17 @@ namespace kelbon {
 		constexpr get_type<index>& get() noexcept {
 			return static_cast<value_in_tuple<get_type<index>, index>*>(this)->value;
 		}
-
+		
 		constexpr tuple_base& operator=(const tuple_base& other)
-			noexcept(((std::is_nothrow_copy_constructible_v<Types>) && ...)) {
+			noexcept(((std::is_nothrow_copy_constructible_v<Types>) && ...))
+			requires(((std::is_copy_assignable_v<Types>) && ...)) {
 			((this->template get<Indexes>() = other.template get<Indexes>()), ...);
 			return *this;
 		}
 		constexpr tuple_base& operator=(tuple_base&& other)
 			noexcept(((std::is_nothrow_move_constructible_v<Types>) && ...)) {
 
-			((this->template get<Indexes>() = std::move(other.template get<Indexes>)), ...);
+			((this->template get<Indexes>() = std::move(other.template get<Indexes>())), ...);
 			return *this;
 		}
 	};

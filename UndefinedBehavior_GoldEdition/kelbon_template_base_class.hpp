@@ -105,7 +105,7 @@ namespace kelbon {
 		}
 		virtual constexpr ~act_wrapper() override = default;
 	};
-
+	
 	// for methods with explicit THIS pointer in method
 	template<template<typename...> typename Base, method Actor, typename ResultType, typename ThisType, typename ... Types>
 	class act_wrapper<Base, Actor, ResultType, type_list<ThisType, Types...>>
@@ -141,28 +141,13 @@ namespace kelbon {
 		}
 		virtual constexpr ~act_wrapper() override = default;
 	};
-
+	
 	// прослойка FOR FUNCTIONS, LAMBDAS and FUNCTORS обрабатывающая входящие типы и передающая дальше
 	template<template<typename...> typename Base, callable Function>
 	class act_wrapper<Base, Function>
 		: public act_wrapper<Base, Function, typename signature<Function>::result_type, typename signature<Function>::parameter_list> {
 	private:
 		using base_t = act_wrapper<Base, Function, typename signature<Function>::result_type, typename signature<Function>::parameter_list>;
-	public:
-		using base_t::base_t;
-	};
-
-	// прослойка FOR METHODS обрабатывающая входящие типы и передающая дальше
-	template<template<typename...> typename Base, method Function>
-	class act_wrapper<Base, Function>
-		: public act_wrapper<Base, Function, typename signature<Function>::result_type,
-		merge_type_lists_t<type_list<std::add_pointer_t<typename signature<Function>::owner_type>>, typename signature<Function>::parameter_list>> {
-	private:
-		using base_t = act_wrapper<Base, Function,
-			typename signature<Function>::result_type,
-			merge_type_lists_t<
-			type_list<std::add_pointer_t<typename signature<Function>::owner_type>>, typename signature<Function>::parameter_list>
-		>;
 	public:
 		using base_t::base_t;
 	};
