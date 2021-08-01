@@ -33,6 +33,8 @@ namespace kelbon::test {
 		testf2() = default;
 		//testf2(const testf2&) = delete;
 		testf2(testf2&&) = default;
+		testf2& operator=(testf2&&) = default;
+
 		std::string operator()(size_t size, char c) volatile & noexcept {
 			return std::string(size, c);
 		}
@@ -50,9 +52,9 @@ namespace kelbon::test {
 		action<std::string(size_t, char)> act1;
 		action<std::string(size_t, char)> act2(&testf); // Todo научиться принимать без &
 		action<std::string(size_t, char)> act3(&testf);
-		//action<std::string(size_t, char)> act4(testf2{});
+		action<std::string(size_t, char)> act4(testf2{});
 		// забирается владение передаваемой сущностью, так что конструктора на не мув версию нет
-		//action<std::string(size_t, char)> act5(std::move(functor));
+		action<std::string(size_t, char)> act5(std::move(functor));
 		action<std::string(size_t, char)> act6(test_lambda{});
 		action<std::string(size_t, char)> act7([v1, &v2](size_t size, char c) mutable noexcept ->std::string {
 			v2 *= 2;
@@ -67,24 +69,26 @@ namespace kelbon::test {
 		fs[0] = std::move(act1);
 		fs[1] = act2.Clone();
 		fs[2] = act3.Clone();
-		//fs[3] = act4.Clone();
 		try {
-			//fs[4] = act5.Clone();
+			fs[3] = act4.Clone();
+			fs[4] = act5.Clone();
 
 			throw test_failed("kelbon::action Clone dont throw exception when needed");
 		}
 		catch (const double_free_possible& msg) {
 			// good way
 		}
-		//fs[4] = std::move(act5);
+		fs[4] = std::move(act5);
 		fs[5] = act6.Clone();
 		fs[6] = act7.Clone();
 
 		fs[0] = act7.Clone(); // was empty;
 		for (auto& func : fs) {
-			std::string check_result = func(5, 'c');
-			if (check_result != "ccccc") {
-				throw test_failed("kelbon::action call works bad");
+			if (!func.Empty()) {
+				std::string check_result = func(5, 'c');
+				if (check_result != "ccccc") {
+					throw test_failed("kelbon::action call works bad");
+				}
 			}
 		}
 		if (v2 != 90.f) {

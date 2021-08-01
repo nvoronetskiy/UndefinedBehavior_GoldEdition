@@ -74,19 +74,33 @@ struct s {
 
 	}
 };
-#include <functional>
+
+
 int main() {
 
-	::kelbon::tuple t(Fctor{});
-	::kelbon::tuple<Fctor> tt;// (std::move(t));
-	tt = std::move(t);
+	std::tuple<int, float, double> tpl;
+
+	//::kelbon::tuple t(Fctor{});
+	//::kelbon::tuple<Fctor> tt;// (std::move(t));
 	//tt = std::move(t);
+	//tt = std::move(t);
+
 	Fctor fct;
 	volatile float fv = 3.4f;
+	//constexpr bool jjjjj = ::kelbon::callable<decltype([](auto) {}) > ;
+	// todo - consteval iterator(try)
+	// todo - operator приведения к функции для kelbon::action(???)
 	// todo - для методов сделать перегрузку конструкторов/операторов/call
 	::kelbon::action<int(s*, float)> act = &s::method;
 	s value1(15);
 	s value2(16);
+	//::kelbon::tuple<int(s::*)(float) const volatile& noexcept> tt1(&s::method);
+	//auto ttcpy = tt1;
+	::kelbon::tuple<int, float> tt1(5, 10.f);
+	auto ttcpy = tt1;
+	//constexpr bool v = std::invocable<decltype([](auto) {}),int > ;
+	constexpr bool bj = std::is_copy_constructible_v<decltype(&s::method)>;
+	constexpr bool bjrly = std::is_copy_constructible_v<kelbon::tuple<int(s::*)(float) const volatile& noexcept>>;
 	auto rv1 = act(&value1, 3.14f);
 	auto rv2 = act(&value2, 10.f);
 	rv1 = act(&value1, 3.14f);

@@ -10,6 +10,17 @@ namespace kelbon {
 		return (sizeof(Types) + ...);
 	}
 
+	// applies first thing to all pack, very usefull thing in noexcept/just variadic checks... (Compilers works bad with fold expressions)
+	template<template<typename...> typename Check, typename ... Types>
+	consteval bool all_in_pack() noexcept {
+		return (Check<Types>::value && ...);
+	}
+
+	template<template<typename...> typename Check, typename ... Types>
+	consteval bool atleast_one_in_pack() noexcept {
+		return (Check<Types>::value || ...);
+	}
+
 	// TEMPLATE FUNCTION always_false FOR STATIC ASSERTS (for example)
 	consteval inline bool always_false(auto) noexcept { return false; }
 	template<typename T>
