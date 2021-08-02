@@ -31,13 +31,15 @@ namespace kelbon {
 			noexcept(std::is_nothrow_copy_constructible_v<T>)
 			requires(std::is_copy_constructible_v<T>) = default;
 
-		constexpr value_in_tuple(value_in_tuple&&) noexcept(std::is_nothrow_move_constructible_v<T>) = default;
+		constexpr value_in_tuple(value_in_tuple&&)
+			noexcept(std::is_nothrow_move_constructible_v<T>) = default;
 
-		constexpr value_in_tuple& operator=(const value_in_tuple& other)
+		constexpr value_in_tuple& operator=(const value_in_tuple&)
 			noexcept(std::is_nothrow_copy_assignable_v<T>)
 			requires(std::is_copy_constructible_v<T>) = default;
 
-		constexpr value_in_tuple& operator=(value_in_tuple&& other) noexcept(std::is_nothrow_move_assignable_v<T>) = default;
+		constexpr value_in_tuple& operator=(value_in_tuple&&)
+			noexcept(std::is_nothrow_move_assignable_v<T>) = default;
 
 		constexpr ~value_in_tuple() = default;
 		// есть вероятность, что здесь можно добавить operator spaceship <=>

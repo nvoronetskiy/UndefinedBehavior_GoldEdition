@@ -8,6 +8,10 @@
 
 namespace kelbon {
 
+	consteval inline size_t default_action_size() noexcept {
+		return 55;
+	}
+
 	template<size_t Size, typename ResultType, typename ... ArgTypes>
 	struct base_remember_call {
 		virtual ResultType CallByMemory(memory_block<Size>& block, ArgTypes ... args) const = 0;
@@ -20,19 +24,8 @@ namespace kelbon {
 	struct remember_call<Size, Actor, ResultType, type_list<ArgTypes...>>
 		: base_remember_call<Size, ResultType, ArgTypes...> {
 		virtual ResultType CallByMemory(memory_block<Size>& block, ArgTypes ... args) const override {
-			if constexpr (!functor<Actor>) {
-				const auto& [invocable] = block.GetDataAs<Actor>();
-				return invocable(args...);
-			} // non const, so its mutable lambda or functor with no const operator()
-			else if constexpr (!signature<Actor>::is_const) {
-				// всё равно будет компилироваться, нужно обернуть в какую то штуку, например always_int<Actor>(...)
-				auto& [invocable] = block.GetDataAs<Actor>();
-				return invocable(args...);
-			}
-			else {
-				const auto& [invocable] = block.GetDataAs<Actor>();
-				return invocable(args...);
-			}
+			auto& [invocable] = block.GetDataAs<Actor>();
+			return invocable(args...);
 		}
 	};
 
@@ -49,7 +42,7 @@ namespace kelbon {
 		using ::std::exception::exception;
 	};
 
-	template<typename, size_t = 55, typename = void> // last argument - fake(for deduction guide)
+	template<typename, size_t = default_action_size(), typename...> // last argument - fake(for deduction guide)
 	class action;
 
 	template<typename ResultType, typename ... ArgTypes, size_t Size>
@@ -166,17 +159,29 @@ namespace kelbon {
 
 	// only for deduction guide ( ? : works bad here)))
 	consteval size_t size_helper(size_t sz) noexcept {
-		constexpr size_t default_size = 55;
+		constexpr size_t default_size = default_action_size();
 		return sz < default_size ? default_size : sz;
 	}
 
-	// Deduction guide
-	template<callable Something>
+	// Deduction guide for functions
+	template<typename ResultType, typename ... ArgTypes>
+	action(ResultType(*)(ArgTypes...))->action<ResultType(ArgTypes...), default_action_size()>;
+
+	// Deduction guide for methods // BAD IDEA, AGAIN ALL QUALIFIERS NEED HERE)))
+	template<typename ResultType, typename Owner, typename ... ArgTypes>
+	action(ResultType(Owner::*)(ArgTypes...))->action<ResultType(Owner*, ArgTypes...), default_action_size()>;
+	template<typename ResultType, typename Owner, typename ... ArgTypes>
+	action(ResultType(Owner::*)(ArgTypes...) noexcept)->action<ResultType(Owner*, ArgTypes...), default_action_size()>;
+	template<typename ResultType, typename Owner, typename ... ArgTypes>
+	action(ResultType(Owner::*)(ArgTypes...) const)->action<ResultType(Owner*, ArgTypes...), default_action_size()>;
+	template<typename ResultType, typename Owner, typename ... ArgTypes>
+	action(ResultType(Owner::*)(ArgTypes...) const noexcept)->action<ResultType(Owner*, ArgTypes...), default_action_size()>;
+
+	// Deduction guide for functors/lamdas with capture
+	template<callable Something, typename ... Types>
 	action(Something&&)->action<typename signature<Something>::result_type, size_helper(sizeof(Something)), typename signature<Something>::parameter_list>;
 
 } // namespace kelbon
-
-
 
 #endif // !KELBON_ACTION_HPP
 

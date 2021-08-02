@@ -9,7 +9,7 @@ namespace kelbon {
 
 	// CONCEPT like_functor - вспомогательный концепт, провер€ющий наличие оператора ()
 	// do not works for template operator() in class
-	template<typename T> // todo - убрать &, это дл€ исправлени€ бага ide
+	template<typename T>
 	concept like_functor = requires { &T::operator(); };
 
 	enum class ref_qual : int { none, lvalue, rvalue };
@@ -18,7 +18,7 @@ namespace kelbon {
 
 	// METHODS (no ref-qual)
 
-	// дл€ методов, нужен €вный this
+	// for methods, need explicit this
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
 	struct signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
 		using owner_type = OwnerType;
@@ -205,12 +205,9 @@ namespace kelbon {
 
 	// по сути ещЄ элипсы сишные ... , но пошли они нахуй
 
-	consteval auto get_function_signature(auto x) noexcept {
+	[[nodiscard]] consteval auto get_function_signature(auto x) noexcept {
 		return signature<decltype(x)>{};
 	}
-	//consteval auto get_function_signature(like_functor auto x) noexcept {
-	//	return signature<decltype(&decltype(x)::operator())>{};
-	//}
 
 	namespace func {
 		template<typename F>

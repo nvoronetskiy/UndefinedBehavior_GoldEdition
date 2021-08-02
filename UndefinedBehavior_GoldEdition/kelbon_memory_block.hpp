@@ -118,7 +118,7 @@ namespace kelbon {
 		void* memory;     // всё что лежит в классе-запоминателе деструктора - указатель на таблицу виртуальных функций
 
 		void Clear() noexcept {
-			if (memory == nullptr) {
+			if (memory == nullptr) [[unlikely]] {
 				return;
 			}
 			// т.к. у меня void*, а для корретного выбора из vtable нужен указатель на базовый класс, то реинтерпретирую указатель на указатель...
@@ -165,7 +165,7 @@ namespace kelbon {
 		}
 
 		// may throw double_free_possible if no avalible copy constructor for stored value
-		memory_block Clone() const {
+		[[nodiscard]] memory_block Clone() const {
 			if (!GetRTTI()->is_copy_constructible()) [[unlikely]] {
 				throw double_free_possible("no copy constructor avalible for stored value (kelbon::memory_block::Clone)");
 			}
@@ -175,14 +175,14 @@ namespace kelbon {
 			return clone;
 		}
 		
-		bool IsTriviallyDestructibleStored() const noexcept {
+		[[nodiscard]] bool IsTriviallyDestructibleStored() const noexcept {
 			if (memory == nullptr) [[unlikely]] {
 				return true;
 			}
 			return GetRTTI()->is_trivially_destructible();
 		}
 		// например, я хочу проверить можно ли создать объект копированием, чтобы не получить бросок исключения
-		bool IsCopybleStored() const noexcept {
+		[[nodiscard]] bool IsCopybleStored() const noexcept {
 			if (memory == nullptr) [[unlikely]] {
 				return false;
 			}
@@ -226,7 +226,7 @@ namespace kelbon {
 
 	template<template<typename...> typename TupleType, typename ... Types>
 	memory_block(TupleType<Types...>&&)->memory_block<sizeof(TupleType<Types...>), TupleType>;
-	// TODO - check не перекрывает ли второй гайд первый
+
 	template<typename ... Types>
 	memory_block(Types&& ...)->memory_block<sizeof(::kelbon::tuple<std::remove_reference_t<Types>...>), ::kelbon::tuple>;
 

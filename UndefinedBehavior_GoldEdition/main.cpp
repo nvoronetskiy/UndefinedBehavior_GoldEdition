@@ -1,4 +1,5 @@
 
+
 #include <iostream>
 #include <string>
 #include <memory>
@@ -18,6 +19,7 @@
 #include "kelbon_template_base_class.hpp"
 
 #include "kelbon_action.hpp"
+
 
 // todo - слушатель, который просто передаёт инфу слушающим дальше, подключенным к нему(позволяет делать только 1 указатель на слушателя в объектах/потоке физики, передавать сообщение
 // и он уже выбирает кому нужно сообщение, например слушатели физики / конкретных каких то вещей.
@@ -75,23 +77,23 @@ struct s {
 	}
 };
 
-
 int main() {
-	constexpr bool fake = ::kelbon::callable<decltype(&s::v)>;
+
+	::kelbon::action myf = [](int v) {return v; };
+
 	Fctor fct;
 	volatile float fv = 3.4f;
 	// todo - consteval iterator(try)
 	// todo - расставить везде likely unlikely nodiscard etc
 	// todo - подумать над explicit в тупле ... (сложная тема)
-
+	// todo - запоминать move ctor in memory block
+	constexpr bool isfctor = ::kelbon::functor<decltype([]() {})>;
 	::kelbon::action<int(s*, float)> act = &s::method;
 	s value1(15);
 	s value2(16);
-	//::kelbon::tuple<int(s::*)(float) const volatile& noexcept> tt1(&s::method);
-	//auto ttcpy = tt1;
+
 	::kelbon::tuple<int, float> tt1(5, 10.f);
 	auto ttcpy = tt1;
-	//constexpr bool v = std::invocable<decltype([](auto) {}),int > ;
 	constexpr bool bj = std::is_copy_constructible_v<decltype(&s::method)>;
 	constexpr bool bjrly = std::is_copy_constructible_v<kelbon::tuple<int(s::*)(float) const volatile& noexcept>>;
 	auto rv1 = act(&value1, 3.14f);
@@ -100,9 +102,8 @@ int main() {
 	::kelbon::action<int(s*, float)> act1;
 	act1 = act.Clone();
 	rv1 = act1(&value2, -2);
-	//auto bindedf = std::bind(act, &value1, std::placeholders::_1);
-	//rv1 = bindedf(15);
-	::kelbon::action<int(int)> FF1([&fv](int x) mutable -> int { fv += 1; return x * 2 + fv; });
+
+	::kelbon::action FF1([&fv](int x) mutable -> int { fv += 1; return x * 2 + fv; });
 	// todo дополнить тесты мемори блока тестами Clone
 	// TODO - убрать static_asserts заменить их на requires closure
 	// TODO - перевести всё на модули
@@ -116,23 +117,21 @@ int main() {
 	int check_value = m1(10);
 	int check_value1 = FF1(10);
 	FF1 = &testF;
-	FF1 = testF;
+	FF1 = &testF;
 	FF1 = [](int v) -> int {return 2 * v; };
 	FF1 = &Fctor::method;
-	FF1 = Fctor::method;
+	FF1 = &Fctor::method;
 	FF1 = [&fv](int v) -> int {
 		std::cout << "Mda";
 		return 150 + fv + v; };
 
-	FF1 = Fctor{}; // todo - и тут
+	FF1 = Fctor{};
 	FF1 = std::move(fct);
-	FF1 = std::move(fct); // todo - разобраться где он тут зовёт копи конструктор
+	FF1 = std::move(fct);
 	FF1 = std::move(FF1);
 	auto FF2 = std::move(FF1);
 	FF1 = std::move(FF2);
-	//TODO TODO TESTS TESTS!!!!!
-	
-	//auto l = FF1(150);
+
 	TestsForActWrapper();
 	TestsForConcepts();
 	TestsForMemoryBlock();
