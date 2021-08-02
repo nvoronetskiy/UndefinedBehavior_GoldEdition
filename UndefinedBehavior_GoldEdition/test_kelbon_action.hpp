@@ -50,13 +50,13 @@ namespace kelbon::test {
 		//::kelbon::tuple tt(testf2{});
 		::kelbon::tuple tt1(std::move(functor));
 		action<std::string(size_t, char)> act1;
-		action<std::string(size_t, char)> act2(&testf); // Todo научиться принимать без &
-		action<std::string(size_t, char)> act3(&testf);
-		action<std::string(size_t, char)> act4(testf2{});
+		action act2(&testf); // Todo научиться принимать без &
+		action act3(&testf);
+		action act4(testf2{});
 		// забирается владение передаваемой сущностью, так что конструктора на не мув версию нет
-		action<std::string(size_t, char)> act5(std::move(functor));
-		action<std::string(size_t, char)> act6(test_lambda{});
-		action<std::string(size_t, char)> act7([v1, &v2](size_t size, char c) mutable noexcept ->std::string {
+		action act5(std::move(functor));
+		action act6(test_lambda{});
+		action act7([v1, &v2](size_t size, char c) mutable noexcept ->std::string {
 			v2 *= 2;
 			v2 += v1;
 			return std::string(size, c);

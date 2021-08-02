@@ -9,8 +9,7 @@
 namespace kelbon {
 
 	class bad_memory_block_access : public ::std::exception {
-	public:
-		bad_memory_block_access(const char* message) : ::std::exception(message) {}
+		using ::std::exception::exception;
 	};
 
 	class double_free_possible : public ::std::exception {
@@ -19,7 +18,7 @@ namespace kelbon {
 
 	// действительно move, обнуляет мувнутую память
 	inline void realmemmove(void* dest, void* srs, size_t count) noexcept {
-		if (dest == srs) {
+		if (dest == srs) [[unlikely]] {
 			return;
 		}
 		std::memcpy(dest, srs, count);
@@ -155,7 +154,7 @@ namespace kelbon {
 		}
 		template<size_t other_max_size> requires(other_max_size <= max_size)
 		memory_block& operator=(memory_block<other_max_size, TupleType>&& other) noexcept {
-			if (&other == this) {
+			if (&other == this) [[unlikely]] {
 				return *this;
 			}
 			Clear();
@@ -167,7 +166,7 @@ namespace kelbon {
 
 		// may throw double_free_possible if no avalible copy constructor for stored value
 		memory_block Clone() const {
-			if (!GetRTTI()->is_copy_constructible()) {
+			if (!GetRTTI()->is_copy_constructible()) [[unlikely]] {
 				throw double_free_possible("no copy constructor avalible for stored value (kelbon::memory_block::Clone)");
 			}
 			memory_block clone;
@@ -177,14 +176,14 @@ namespace kelbon {
 		}
 		
 		bool IsTriviallyDestructibleStored() const noexcept {
-			if (memory == nullptr) {
+			if (memory == nullptr) [[unlikely]] {
 				return true;
 			}
 			return GetRTTI()->is_trivially_destructible();
 		}
 		// например, я хочу проверить можно ли создать объект копированием, чтобы не получить бросок исключения
 		bool IsCopybleStored() const noexcept {
-			if (memory == nullptr) {
+			if (memory == nullptr) [[unlikely]] {
 				return false;
 			}
 			return GetRTTI()->is_copy_constructible();

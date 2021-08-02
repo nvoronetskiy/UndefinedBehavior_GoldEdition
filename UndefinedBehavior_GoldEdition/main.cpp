@@ -77,20 +77,13 @@ struct s {
 
 
 int main() {
-
-	std::tuple<int, float, double> tpl;
-
-	//::kelbon::tuple t(Fctor{});
-	//::kelbon::tuple<Fctor> tt;// (std::move(t));
-	//tt = std::move(t);
-	//tt = std::move(t);
-
+	constexpr bool fake = ::kelbon::callable<decltype(&s::v)>;
 	Fctor fct;
 	volatile float fv = 3.4f;
-	//constexpr bool jjjjj = ::kelbon::callable<decltype([](auto) {}) > ;
 	// todo - consteval iterator(try)
-	// todo - operator приведения к функции для kelbon::action(???)
-	// todo - для методов сделать перегрузку конструкторов/операторов/call
+	// todo - расставить везде likely unlikely nodiscard etc
+	// todo - подумать над explicit в тупле ... (сложная тема)
+
 	::kelbon::action<int(s*, float)> act = &s::method;
 	s value1(15);
 	s value2(16);
@@ -113,30 +106,30 @@ int main() {
 	// todo дополнить тесты мемори блока тестами Clone
 	// TODO - убрать static_asserts заменить их на requires closure
 	// TODO - перевести всё на модули
-	// TODO CallByMemory разобраться получше
+	// TODO - CallByMemory разобраться получше
 
 	// Модули - можно ли экспортировать только одну специализацию???
 	// todo - попробовать запустить code cleanup (на другой ветке гита)
-	//auto m1 = FF1.Clone();
-	//FF1(10);
-	//FF1(10);
-	//int check_value = m1(10);
-	//int check_value1 = FF1(10);
-	//FF1 = &testF;
-	//FF1 = testF;
-	//FF1 = [](int v) -> int {return 2 * v; };
-	//FF1 = &Fctor::method;
-	//FF1 = Fctor::method;
-	//FF1 = [&fv](int v) -> int {
-		//std::cout << "Mda";
-		//return 150 + fv + v; };
+	auto m1 = FF1.Clone();
+	FF1(10);
+	FF1(10);
+	int check_value = m1(10);
+	int check_value1 = FF1(10);
+	FF1 = &testF;
+	FF1 = testF;
+	FF1 = [](int v) -> int {return 2 * v; };
+	FF1 = &Fctor::method;
+	FF1 = Fctor::method;
+	FF1 = [&fv](int v) -> int {
+		std::cout << "Mda";
+		return 150 + fv + v; };
 
-	//FF1 = Fctor{}; // todo - и тут
-	//FF1 = fct;
-	//FF1 = std::move(fct); // todo - разобраться где он тут зовёт копи конструктор
-	//FF1 = std::move(FF1);
-	//auto FF2 = std::move(FF1);
-	//FF1 = std::move(FF2);
+	FF1 = Fctor{}; // todo - и тут
+	FF1 = std::move(fct);
+	FF1 = std::move(fct); // todo - разобраться где он тут зовёт копи конструктор
+	FF1 = std::move(FF1);
+	auto FF2 = std::move(FF1);
+	FF1 = std::move(FF2);
 	//TODO TODO TESTS TESTS!!!!!
 	
 	//auto l = FF1(150);

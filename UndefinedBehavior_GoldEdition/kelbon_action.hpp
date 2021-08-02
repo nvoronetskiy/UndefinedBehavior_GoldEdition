@@ -5,7 +5,7 @@
 
 #include "kelbon_concepts_functional.hpp"
 #include "kelbon_memory_block.hpp"
-#include <vector>
+
 namespace kelbon {
 
 	template<size_t Size, typename ResultType, typename ... ArgTypes>
@@ -49,7 +49,7 @@ namespace kelbon {
 		using ::std::exception::exception;
 	};
 
-	template<typename, size_t = 55>
+	template<typename, size_t = 55, typename = void> // last argument - fake(for deduction guide)
 	class action;
 
 	template<typename ResultType, typename ... ArgTypes, size_t Size>
@@ -57,7 +57,7 @@ namespace kelbon {
 	protected:
 		using suitable_func_type = ResultType(ArgTypes...);
 
-		mutable memory_block<Size> memory; // 64 byte on x64 TODO
+		mutable memory_block<Size> memory;
 		void* invoker;
 
 		template<callable Actor>
@@ -66,7 +66,7 @@ namespace kelbon {
 			using parameter_list = typename signature<Actor>::parameter_list;
 			new(&invoker) remember_call<Size, Actor, result_type, parameter_list>{};
 		}
-		// interesting forward here... ArgTypes may be reference, but forward<T&> ill formed
+
 		ResultType Call(ArgTypes... args) const {
 			return reinterpret_cast<const base_remember_call<Size, ResultType, ArgTypes...>*>
 				(&invoker)->CallByMemory(memory, args...);
@@ -79,13 +79,22 @@ namespace kelbon {
 		constexpr action(action&& other) noexcept : memory(std::move(other.memory)), invoker(other.invoker) {
 			other.invoker = nullptr;
 		}
-		// in case value its a SomeType& template parameter, so its not callable,
-		// its good behavior because memory_block takes control of the actor
+		// in case value is a SomeType& template parameter, so its not callable,
+		// its good behavior because memory_block takes control over actor
 		template<callable Actor>
 		constexpr action(Actor&& actor) noexcept : memory(std::forward<Actor>(actor)) {
 			static_assert(func::returns<Actor, ResultType>, "Incorrect result type of the function");
 			static_assert(func::accepts<Actor, ArgTypes...>, "Incorrent argument list of the function");
 			RememberHowToCall<Actor>();
+		}
+
+		// for deduction guide support
+		constexpr action(action<ResultType, Size, type_list<ArgTypes...>>&& action_from_deduction_guide)
+			noexcept(std::is_nothrow_move_constructible_v<decltype(*this)>)
+			: action(static_cast<action&&>(action_from_deduction_guide)) {}
+		constexpr action& operator=(action<ResultType, Size, type_list<ArgTypes...>>&& action_from_deduction_guide)
+		noexcept(std::is_nothrow_move_assignable_v<decltype(*this)>) {
+			return *this = static_cast<action&&>(action_from_deduction_guide);
 		}
 
 		// may throw double_free_possible if no avalible copy constructor for stored value
@@ -121,7 +130,7 @@ namespace kelbon {
 			return *this;
 		}
 		constexpr action& operator=(action&& other) noexcept {
-			if (this == &other) {
+			if (this == &other) [[unlikely]] {
 				return *this;
 			}
 			invoker = other.invoker;
@@ -137,14 +146,33 @@ namespace kelbon {
 
 		
 		constexpr ResultType operator()(ArgTypes ... args) const {
-			if (Empty()) {
+			if (Empty()) [[unlikely]] {
 				throw empty_function_call("You called an empty function, kelbon::action operator()");
 			}
 			return Call(args...);
 		}
 	};
 
-	// TODO - dedcution guide
+	// for deduction guide only
+	template<typename ResultType, typename ... ArgTypes, size_t Size>
+	class action<ResultType, Size, type_list<ArgTypes...>>
+		: public action<ResultType(ArgTypes...), Size> {
+	private:
+		using base_t = action<ResultType(ArgTypes...), Size>;
+	public:
+		using base_t::base_t;
+	};
+
+
+	// only for deduction guide ( ? : works bad here)))
+	consteval size_t size_helper(size_t sz) noexcept {
+		constexpr size_t default_size = 55;
+		return sz < default_size ? default_size : sz;
+	}
+
+	// Deduction guide
+	template<callable Something>
+	action(Something&&)->action<typename signature<Something>::result_type, size_helper(sizeof(Something)), typename signature<Something>::parameter_list>;
 
 } // namespace kelbon
 
