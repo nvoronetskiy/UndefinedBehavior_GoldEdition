@@ -5,29 +5,32 @@
 #include <tuple> // structure binding specializtions
 #include <type_traits>
 
-#include "kelbon_type_traits_numeric.hpp"
+#include "kelbon_type_traits_advanced.hpp"
 
 namespace kelbon {
 
+	// behavior of this T wrapper should be as similar to T as possible
 	template<typename T, size_t index>
 	struct value_in_tuple {
-		constexpr value_in_tuple() noexcept(std::is_nothrow_default_constructible_v<T>) = default;
+		constexpr explicit(is_explicit_default_constructible_v<T>) value_in_tuple()
+			noexcept(std::is_nothrow_default_constructible_v<T>)
+			requires(std::is_default_constructible_v<T>) = default;
 
-		constexpr value_in_tuple(const T& value)
+		constexpr explicit(is_explicit_copy_constructible_v<T>) value_in_tuple(const T& value)
 			noexcept(std::is_nothrow_copy_constructible_v<T>)
 			requires(std::is_copy_constructible_v<T>)
 			: value(value)
 		{}
 
-		constexpr value_in_tuple(T&& value)
+		constexpr explicit(is_explicit_move_constructible_v<T>) value_in_tuple(T&& value)
 			noexcept(std::is_nothrow_move_constructible_v<T>)
 			: value(std::move(value))
 		{}
-		constexpr value_in_tuple(const value_in_tuple&)
+		constexpr explicit(is_explicit_copy_constructible_v<T>) value_in_tuple(const value_in_tuple&)
 			noexcept(std::is_nothrow_copy_constructible_v<T>)
 			requires(std::is_copy_constructible_v<T>) = default;
 
-		constexpr value_in_tuple(value_in_tuple&&)
+		constexpr explicit(is_explicit_move_constructible_v<T>) value_in_tuple(value_in_tuple&&)
 			noexcept(std::is_nothrow_move_constructible_v<T>) = default;
 
 		constexpr value_in_tuple& operator=(const value_in_tuple&)
@@ -56,8 +59,8 @@ namespace kelbon {
 		template<size_t index>
 		using get_type = typename type_array::template get_element<index>;
 	public:
-		constexpr tuple_base()
-			noexcept(all_in_pack<std::is_nothrow_default_constructible, Types...>())
+		constexpr explicit(atleast_one_in_pack<is_explicit_default_constructible, Types...>) tuple_base()
+			noexcept(all_in_pack<std::is_nothrow_default_constructible, Types...>)
 			: value_in_tuple<Types, Indexes>()...
 		{}
 
@@ -74,8 +77,8 @@ namespace kelbon {
 			//: value_in_tuple<Types, Indexes>(other.template get<Indexes>())...
 		//{}
 
-		constexpr tuple_base(tuple_base&& other)
-			noexcept(all_in_pack<std::is_nothrow_move_constructible, Types...>())
+		constexpr explicit(atleast_one_in_pack<is_explicit_move_constructible, Types...>) tuple_base(tuple_base&& other)
+			noexcept(all_in_pack<std::is_nothrow_move_constructible, Types...>)
 			: value_in_tuple<Types, Indexes>(std::move(other.template get<Indexes>()))...
 		{}
 		// избегание перекрытия других конструкторов, в том числе мув/копи, т.к. видимо из-за requires он выигрывает перегрузку у мув конструктора
@@ -96,13 +99,13 @@ namespace kelbon {
 		}
 		
 		constexpr tuple_base& operator=(const tuple_base& other)
-			noexcept(all_in_pack<std::is_nothrow_copy_assignable, Types...>())
-			requires(all_in_pack<std::is_copy_assignable, Types...>()) {
+			noexcept(all_in_pack<std::is_nothrow_copy_assignable, Types...>)
+			requires(all_in_pack<std::is_copy_assignable, Types...>) {
 			((this->template get<Indexes>() = other.template get<Indexes>()), ...);
 			return *this;
 		}
 		constexpr tuple_base& operator=(tuple_base&& other)
-			noexcept(all_in_pack<std::is_nothrow_move_assignable, Types...>()) {
+			noexcept(all_in_pack<std::is_nothrow_move_assignable, Types...>) {
 
 			((this->template get<Indexes>() = std::move(other.template get<Indexes>())), ...);
 			return *this;
@@ -125,18 +128,18 @@ namespace kelbon {
 		template<size_t index>
 		using get_type = typename type_array::template get_element<index>;
 	public:
-		constexpr tuple_base()
-			noexcept(all_in_pack<std::is_nothrow_default_constructible, Types...>())
+		constexpr explicit(atleast_one_in_pack<is_explicit_default_constructible, Types...>) tuple_base()
+			noexcept(all_in_pack<std::is_nothrow_default_constructible, Types...>)
 			: value_in_tuple<Types, Indexes>()...
 		{}
 
-		constexpr tuple_base(const tuple_base& other)
-			noexcept(all_in_pack<std::is_nothrow_copy_constructible, Types...>())
+		constexpr explicit(atleast_one_in_pack<is_explicit_copy_constructible, Types...>) tuple_base(const tuple_base& other)
+			noexcept(all_in_pack<std::is_nothrow_copy_constructible, Types...>)
 			: value_in_tuple<Types, Indexes>(other.template get<Indexes>())...
 		{}
 
-		constexpr tuple_base(tuple_base&& other)
-			noexcept(all_in_pack<std::is_nothrow_move_constructible, Types...>())
+		constexpr explicit(atleast_one_in_pack<is_explicit_move_constructible, Types...>) tuple_base(tuple_base&& other)
+			noexcept(all_in_pack<std::is_nothrow_move_constructible, Types...>)
 			: value_in_tuple<Types, Indexes>(if_not_ref_move(other.template get<Indexes>()))...
 		{}
 		// избегание перекрытия других конструкторов, в том числе мув/копи, т.к. видимо из-за requires он выигрывает перегрузку у мув конструктора
@@ -157,13 +160,13 @@ namespace kelbon {
 		}
 		
 		constexpr tuple_base& operator=(const tuple_base& other)
-			noexcept(all_in_pack<std::is_nothrow_copy_assignable, Types...>())
-			requires(all_in_pack<std::is_copy_assignable, Types...>()) {
+			noexcept(all_in_pack<std::is_nothrow_copy_assignable, Types...>)
+			requires(all_in_pack<std::is_copy_assignable, Types...>) {
 			((this->template get<Indexes>() = other.template get<Indexes>()), ...);
 			return *this;
 		}
 		constexpr tuple_base& operator=(tuple_base&& other)
-			noexcept(all_in_pack<std::is_nothrow_move_assignable, Types...>()) {
+			noexcept(all_in_pack<std::is_nothrow_move_assignable, Types...>) {
 
 			((this->template get<Indexes>() = std::move(other.template get<Indexes>())), ...);
 			return *this;
@@ -172,10 +175,10 @@ namespace kelbon {
 
 	// использую тут "технологии" множественного наследования с последовательностью чисел
 	template<typename ... Types>
-	class tuple : public tuple_base<all_in_pack<std::is_copy_constructible, Types...>(), make_value_list<size_t, sizeof...(Types)>, Types...> {
+	class tuple : public tuple_base<all_in_pack<std::is_copy_constructible, Types...>, make_value_list<size_t, sizeof...(Types)>, Types...> {
 	protected:
 		// тут просто передача полномочий на всё tuple_base, потому что там раскрыт пак индексов позволяющий красиво всё писать
-		using base_t = tuple_base<all_in_pack<std::is_copy_constructible, Types...>(), make_value_list<size_t, sizeof...(Types)>, Types...>;
+		using base_t = tuple_base<all_in_pack<std::is_copy_constructible, Types...>, make_value_list<size_t, sizeof...(Types)>, Types...>;
 	public:
 		using base_t::base_t;
 	};

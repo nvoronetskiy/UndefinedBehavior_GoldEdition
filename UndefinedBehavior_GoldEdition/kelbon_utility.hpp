@@ -12,14 +12,10 @@ namespace kelbon {
 
 	// applies first thing to all pack, very usefull thing in noexcept/just variadic checks... (Compilers works bad with fold expressions)
 	template<template<typename...> typename Check, typename ... Types>
-	[[nodiscard]] consteval bool all_in_pack() noexcept {
-		return (Check<Types>::value && ...);
-	}
+	constexpr bool all_in_pack = (Check<Types>::value && ...);
 
 	template<template<typename...> typename Check, typename ... Types>
-	[[nodiscard]] consteval bool atleast_one_in_pack() noexcept {
-		return (Check<Types>::value || ...);
-	}
+	constexpr bool atleast_one_in_pack = (Check<Types>::value || ...);
 
 	// TEMPLATE FUNCTION always_false FOR STATIC ASSERTS (for example)
 	[[nodiscard]] consteval inline bool always_false(auto) noexcept { return false; }

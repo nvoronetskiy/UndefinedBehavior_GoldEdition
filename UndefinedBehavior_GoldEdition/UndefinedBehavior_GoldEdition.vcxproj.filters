@@ -38,7 +38,7 @@
     <ClInclude Include="kelbon_preprocessor.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="kelbon_type_traits_numeric.hpp">
+    <ClInclude Include="kelbon_type_traits_advanced.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="kelbon_concepts_functional.hpp">

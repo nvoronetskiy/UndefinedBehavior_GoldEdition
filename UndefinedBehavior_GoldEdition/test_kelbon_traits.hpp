@@ -6,7 +6,7 @@
 
 #include "kelbon_type_traits_base.hpp"
 #include "kelbon_type_traits_functional.hpp"
-#include "kelbon_type_traits_numeric.hpp"
+#include "kelbon_type_traits_advanced.hpp"
 #include "kelbon_type_traits_variadic.hpp"
 
 #include "test_kelbon_base.hpp"

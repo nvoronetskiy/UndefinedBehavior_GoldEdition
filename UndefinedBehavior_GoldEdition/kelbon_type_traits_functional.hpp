@@ -21,6 +21,7 @@ namespace kelbon {
 	// for methods, need explicit this
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
 	struct signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
+		using func_type = ResultType(OwnerType*, ArgumentTypes...);
 		using owner_type = OwnerType;
 		using result_type = ResultType;
 		using parameter_list = type_list<OwnerType*, ArgumentTypes...>;
@@ -67,7 +68,6 @@ namespace kelbon {
 	};
 
 	// METHODS (LVALUE ref-qual)
-
 	
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
 	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) &>
@@ -157,12 +157,14 @@ namespace kelbon {
 
 	template<typename ResultType, typename ... ArgumentTypes>
 	struct signature<ResultType(*)(ArgumentTypes...)> {
+		using func_type = ResultType(ArgumentTypes...);
 		using result_type = ResultType;
 		using parameter_list = type_list<ArgumentTypes...>;
 		static constexpr bool is_noexcept = false;
 	};
 	template<typename ResultType, typename ... ArgumentTypes>
 	struct signature<ResultType(*)(ArgumentTypes...) noexcept> {
+		using func_type = ResultType(ArgumentTypes...);
 		using result_type = ResultType;
 		using parameter_list = type_list<ArgumentTypes...>;
 		static constexpr bool is_noexcept = true;
@@ -182,6 +184,14 @@ namespace kelbon {
 
 	} // namespace detail
 
+	// helper for functor
+	template<typename...>
+	struct func_type_helper;
+	template<typename ResultType, typename ... ArgTypes>
+	struct func_type_helper<ResultType, type_list<ArgTypes...>> {
+		using type = ResultType(ArgTypes...);
+	};
+
 	template<like_functor T>
 	struct signature<T> {
 	private:
@@ -194,6 +204,7 @@ namespace kelbon {
 		static constexpr bool is_volatile = base_t::is_volatile;
 		static constexpr bool is_noexcept = base_t::is_noexcept;
 		static constexpr ref_qual ref_qualification = base_t::ref_qualification;
+		using func_type = typename func_type_helper<result_type, parameter_list>::type;
 	};
 	
 	// takes reference to callable/method/lambda/FUNCTOR and gives its info

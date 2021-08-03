@@ -160,7 +160,7 @@
     <ClInclude Include="kelbon_memory_block.hpp" />
     <ClInclude Include="kelbon_preprocessor.hpp" />
     <ClInclude Include="kelbon_type_traits_base.hpp" />
-    <ClInclude Include="kelbon_type_traits_numeric.hpp" />
+    <ClInclude Include="kelbon_type_traits_advanced.hpp" />
     <ClInclude Include="kelbon_type_traits_variadic.hpp" />
     <ClInclude Include="kelbon_utility.hpp" />
     <ClInclude Include="test_kelbon_concepts.hpp" />

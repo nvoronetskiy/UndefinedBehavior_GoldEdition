@@ -12,7 +12,7 @@
 
 #include "kelbon_type_traits_functional.hpp"
 #include "kelbon_memory_block.hpp"
-#include "kelbon_type_traits_numeric.hpp"
+#include "kelbon_type_traits_advanced.hpp"
 
 #include "kelbon_tuple.hpp"
 
@@ -47,7 +47,7 @@ struct Fctor {
 	int operator()(int v) const noexcept {
 		return v * 2;
 	}
-	Fctor() = default;
+	explicit Fctor() = default;
 	//Fctor(const Fctor&) {
 	//	std::cout << "copy\n";
 	//}
@@ -66,7 +66,7 @@ struct Fctor {
 struct s {
 	int v;
 	s() = default;
-	s(int v) :v(v) {}
+	explicit s(int v) :v(v) {}
 	s& operator=(const s&) = default;
 	int method(float fv) const volatile & noexcept {
 		std::cout << "10";
@@ -78,16 +78,20 @@ struct s {
 };
 
 int main() {
-
+	// todo - сделать так чтобы с аргументами работало тоже
+	constexpr bool sss = ::kelbon::is_explicit_constructible_v<s>;
+	constexpr bool waw = ::kelbon::is_explicit_constructible_v<Fctor>;
 	::kelbon::action myf = [](int v) {return v; };
 
 	Fctor fct;
 	volatile float fv = 3.4f;
-	
+
+	// todo - atleast one in pack, all in pack сделать это шаблонными переменными
+	// todo -fixed string, которую можно передавать как шаблонный параметр + user defined literal, который её создает из const char*
 	// todo - чекнуть работу tuple с ссылками
 	// todo - Clang Format
 	// todo - убрать как можно больше предупреждений
-	// todo - подумать над explicit в тупле ... (сложная тема)
+	// todo - подумать над explicit в тупле ... (сложная тема) (тупо explicit(bool) поставить, но для этого нужно написать трейт/концепт explciit constructible)
 	// todo - запоминать move ctor in memory block
 	constexpr bool isfctor = ::kelbon::functor<decltype([]() {})>;
 	::kelbon::action<int(s*, float)> act = &s::method;

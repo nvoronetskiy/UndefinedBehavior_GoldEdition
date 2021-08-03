@@ -8,9 +8,7 @@
 
 namespace kelbon {
 
-	consteval inline size_t default_action_size() noexcept {
-		return 55;
-	}
+	constexpr inline size_t default_action_size = 55;
 
 	template<size_t Size, typename ResultType, typename ... ArgTypes>
 	struct base_remember_call {
@@ -42,7 +40,7 @@ namespace kelbon {
 		using ::std::exception::exception;
 	};
 
-	template<typename, size_t = default_action_size(), typename...> // last argument - fake(for deduction guide)
+	template<typename, size_t = default_action_size>
 	class action;
 
 	template<typename ResultType, typename ... ArgTypes, size_t Size>
@@ -69,27 +67,18 @@ namespace kelbon {
 			noexcept(std::is_nothrow_default_constructible_v<memory_block<Size>>)
 			: memory(), invoker(nullptr)
 		{}
-		constexpr action(action&& other) noexcept : memory(std::move(other.memory)), invoker(other.invoker) {
+		constexpr action(action&& other)
+			: memory(std::move(other.memory)), invoker(other.invoker) {
 			other.invoker = nullptr;
 		}
 
 		// in case value is a SomeType& template parameter, so its not callable,
 		// its good behavior because memory_block takes control over actor
 		template<callable Actor>
-		constexpr action(Actor&& actor) noexcept : memory(std::forward<Actor>(actor)) {
+		constexpr action(Actor&& actor) : memory(std::forward<Actor>(actor)) {
 			static_assert(func::returns<Actor, ResultType>, "Incorrect result type of the function");
 			static_assert(func::accepts<Actor, ArgTypes...>, "Incorrent argument list of the function");
 			RememberHowToCall<Actor>();
-		}
-
-		// for deduction guide support
-		constexpr action(action<ResultType, Size, type_list<ArgTypes...>>&& action_from_deduction_guide)
-			noexcept(std::is_nothrow_move_constructible_v<decltype(*this)>)
-			: action(static_cast<action&&>(action_from_deduction_guide))
-		{}
-		constexpr action& operator=(action<ResultType, Size, type_list<ArgTypes...>>&& action_from_deduction_guide)
-		noexcept(std::is_nothrow_move_assignable_v<decltype(*this)>) {
-			return *this = static_cast<action&&>(action_from_deduction_guide);
 		}
 
 		// may throw double_free_possible if no avalible copy constructor for stored value
@@ -153,40 +142,18 @@ namespace kelbon {
 		}
 	};
 
-	// for deduction guide only
-	template<typename ResultType, typename ... ArgTypes, size_t Size>
-	class action<ResultType, Size, type_list<ArgTypes...>>
-		: public action<ResultType(ArgTypes...), Size> {
-	private:
-		using base_t = action<ResultType(ArgTypes...), Size>;
-	public:
-		using base_t::base_t;
-	};
-
-
-	// only for deduction guide ( ? : works bad here)))
+	// only for deduction guide ( ? : works bad in it)))
 	consteval size_t size_helper(size_t sz) noexcept {
-		constexpr size_t default_size = default_action_size();
-		return sz < default_size ? default_size : sz;
+		return sz < default_action_size ? default_action_size : sz;
 	}
 
 	// Deduction guide for functions and function pointers
 	template<typename ResultType, typename ... ArgTypes>
-	action(ResultType(*)(ArgTypes...))->action<ResultType(ArgTypes...), default_action_size()>;
+	action(ResultType(*)(ArgTypes...))->action<ResultType(ArgTypes...), default_action_size>;
 
-	// Deduction guide for methods // BAD IDEA, AGAIN ALL QUALIFIERS NEED HERE)))
-	template<typename ResultType, typename Owner, typename ... ArgTypes>
-	action(ResultType(Owner::*)(ArgTypes...))->action<ResultType(Owner*, ArgTypes...), default_action_size()>;
-	template<typename ResultType, typename Owner, typename ... ArgTypes>
-	action(ResultType(Owner::*)(ArgTypes...) noexcept)->action<ResultType(Owner*, ArgTypes...), default_action_size()>;
-	template<typename ResultType, typename Owner, typename ... ArgTypes>
-	action(ResultType(Owner::*)(ArgTypes...) const)->action<ResultType(Owner*, ArgTypes...), default_action_size()>;
-	template<typename ResultType, typename Owner, typename ... ArgTypes>
-	action(ResultType(Owner::*)(ArgTypes...) const noexcept)->action<ResultType(Owner*, ArgTypes...), default_action_size()>;
-
-	// Deduction guide for functors/lamdas with capture
+	// Deduction guide for functors/lamdas with capture/methods
 	template<callable Something, typename ... Types>
-	action(Something&&)->action<typename signature<Something>::result_type, size_helper(sizeof(Something)), typename signature<Something>::parameter_list>;
+	action(Something&&)->action<typename signature<Something>::func_type, size_helper(sizeof(Something))>;
 
 } // namespace kelbon
 

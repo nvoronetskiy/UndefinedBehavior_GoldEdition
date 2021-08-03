@@ -1,13 +1,13 @@
 
-#ifndef KELBON_TYPE_TRAITS_NUMERIC_HPP
-#define KELBON_TYPE_TRAITS_NUMERIC_HPP
+#ifndef KELBON_TYPE_TRAITS_ADVANCED_HPP
+#define KELBON_TYPE_TRAITS_ADVANCED_HPP
 
 #include "kelbon_concepts_base.hpp"
 #include "kelbon_utility.hpp"
 
 namespace kelbon {
 
-	// TRAIT VALUE_LIST
+	// TRAIT value_list
 	namespace detail {
 		template<typename, size_t, size_t, auto...>
 		struct value_of_element_helper;
@@ -34,7 +34,7 @@ namespace kelbon {
 		static constexpr T get_element = value_of_element<index, T, Values...>::value;
 	};
 
-	// TRAIT MAKE_VALUE_SEQUENCE TODO - улучшить (sequence) и перенести в variadic
+	// TRAIT make_value_sequence
 	namespace detail {
 		template<numeric T, T...>
 		struct value_sequence;
@@ -79,7 +79,7 @@ namespace kelbon {
 	template<typename T, size_t Count, T StartValue = static_cast<T>(0), T Step = static_cast<T>(1)>
 	using make_value_list = typename detail::value_sequence<T, Count, StartValue, static_cast<T>(0), Step>::type;
 
-	// TEMPLATE REVERSE_TYPE_LIST
+	// TRAIT reverse_type_list
 	namespace detail {
 		template<typename ...>
 		struct reverse_type_list_helper;
@@ -100,7 +100,42 @@ namespace kelbon {
 	template<typename ... Types>
 	using reverse_type_list_t = typename reverse_type_list<Types...>::type;
 
+	// TRAIT is_explicit_constructible
+	template<typename T, typename ... Args>
+	struct is_explicit_constructible {
+	private:
+		template<typename Type>
+		static true_type check(Type&&);
+
+		template<typename ... Something>
+		static consteval auto func(int)->decltype(check<T>({ std::declval<Something>()... }), bool{}) {
+			return false;
+		}
+		template<typename ... Something>
+		static consteval bool func(...) {
+			return true;
+		}
+	public:
+		static constexpr bool value = func<Args...>(0);
+	};
+
+	template<typename T, typename ... Types>
+	constexpr inline bool is_explicit_constructible_v = is_explicit_constructible<T, Types...>::value;
+	template<typename T>
+	constexpr inline bool is_explicit_default_constructible_v = is_explicit_constructible_v<T>;
+	template<typename T>
+	constexpr inline bool is_explicit_copy_constructible_v = is_explicit_constructible_v<T, const T&>;
+	template<typename T>
+	constexpr inline bool is_explicit_move_constructible_v = is_explicit_constructible_v<T, T&&>;
+	// for all_in_pack or atleast_one_in_pack
+	template<typename T>
+	struct is_explicit_default_constructible : std::bool_constant<is_explicit_constructible_v<T>> {};
+	template<typename T>
+	struct is_explicit_copy_constructible : std::bool_constant<is_explicit_copy_constructible_v<T>> {};
+	template<typename T>
+	struct is_explicit_move_constructible : std::bool_constant<is_explicit_move_constructible_v<T>> {};
+
 } // namespace kelbon
 
-#endif // !KELBON_TYPE_TRAITS_NUMERIC_HPP
+#endif // !KELBON_TYPE_TRAITS_ADVANCED_HPP
 

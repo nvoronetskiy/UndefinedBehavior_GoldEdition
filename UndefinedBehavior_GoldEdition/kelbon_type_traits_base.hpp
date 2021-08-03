@@ -5,7 +5,7 @@
 
 namespace kelbon {
 
-	// TEMPLATE CONSTANTS
+	// TRAIT constant/true_type/false_type
 	template<typename T, T Value>
 	struct constant { static constexpr T value = Value; };
 	template<bool value>
@@ -13,7 +13,7 @@ namespace kelbon {
 	using true_type = bool_constant<true>;
 	using false_type = bool_constant<false>;
 
-	// TEMPLATE ADD_RVALUE_REFERENCE
+	// TRAIT create_rvalue_reference
 	template<typename T>
 	struct create_rvalue_reference;
 	template<typename T>
@@ -28,7 +28,7 @@ namespace kelbon {
 	template<typename T>
 	using ref_to_func_which_returns = create_rvalue_reference_t<T>(*)();
 
-	// TEMPLATE CONDITIONAL
+	// TRAIT conditional
 	template<bool Condition, typename T, typename U>
 	struct conditional { using type = T; };
 	template<typename T, typename U>
@@ -37,7 +37,7 @@ namespace kelbon {
 	template<bool Condition, typename T, typename U>
 	using conditional_t = typename conditional<Condition, T, U>::type;
 
-	// TEMPLATE DECAY (not same std::decay)
+	// TRAIT decay (not same std::decay)
 	template<typename T>
 	struct decay { using type = T; };
 	template<typename T>
