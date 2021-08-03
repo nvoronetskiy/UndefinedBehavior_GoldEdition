@@ -72,6 +72,7 @@ namespace kelbon {
 		constexpr action(action&& other) noexcept : memory(std::move(other.memory)), invoker(other.invoker) {
 			other.invoker = nullptr;
 		}
+
 		// in case value is a SomeType& template parameter, so its not callable,
 		// its good behavior because memory_block takes control over actor
 		template<callable Actor>
@@ -84,7 +85,8 @@ namespace kelbon {
 		// for deduction guide support
 		constexpr action(action<ResultType, Size, type_list<ArgTypes...>>&& action_from_deduction_guide)
 			noexcept(std::is_nothrow_move_constructible_v<decltype(*this)>)
-			: action(static_cast<action&&>(action_from_deduction_guide)) {}
+			: action(static_cast<action&&>(action_from_deduction_guide))
+		{}
 		constexpr action& operator=(action<ResultType, Size, type_list<ArgTypes...>>&& action_from_deduction_guide)
 		noexcept(std::is_nothrow_move_assignable_v<decltype(*this)>) {
 			return *this = static_cast<action&&>(action_from_deduction_guide);
@@ -112,11 +114,16 @@ namespace kelbon {
 			static_assert(func::returns<Actor, ResultType>, "Incorrect result type of the function");
 			static_assert(func::accepts<Actor, ArgTypes...>, "Incorrent argument list of the function");
 			Actor copy = something;
-			memory = memory_block<Size, ::kelbon::tuple>(copy);
+			if constexpr (std::is_move_constructible_v<Actor>) {
+				memory = memory_block<Size, ::kelbon::tuple>(std::move(copy));
+			}
+			else {
+				memory = memory_block<Size, ::kelbon::tuple>(copy);
+			}
 			RememberHowToCall<Actor>();
 			return *this;
 		}
-		// for functions/methods and pointers to it
+
 		constexpr action& operator=(suitable_func_type* something) noexcept {
 			memory = memory_block<Size, ::kelbon::tuple>(something);
 			RememberHowToCall<suitable_func_type*>();
@@ -163,7 +170,7 @@ namespace kelbon {
 		return sz < default_size ? default_size : sz;
 	}
 
-	// Deduction guide for functions
+	// Deduction guide for functions and function pointers
 	template<typename ResultType, typename ... ArgTypes>
 	action(ResultType(*)(ArgTypes...))->action<ResultType(ArgTypes...), default_action_size()>;
 

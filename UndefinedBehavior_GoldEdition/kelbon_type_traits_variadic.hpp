@@ -32,64 +32,7 @@ namespace kelbon {
 		static constexpr size_t count_of_arguments = sizeof...(Types);
 		template<size_t index>
 		using get_element = typename type_of_element<index, Types...>::type;
-
-		/*
-		struct base_iterator {
-			constexpr virtual size_t get_index() noexcept = 0;
-		};
-		template<size_t index>
-		struct ct_iterator : base_iterator {
-			using type_array = type_list<Types...>;
-
-			using type = type_array::get_element<index>;
-
-			constexpr ct_iterator<index + 1> operator*() noexcept {
-				return {};
-			}
-			constexpr size_t get_index() noexcept override {
-				return index;
-			}
-			constexpr ct_iterator& operator++() noexcept {
-				return *this;
-			}
-			template<typename T>
-			constexpr bool operator!=(const T&) noexcept {
-				return false;
-			}
-			constexpr bool operator!=(const ct_iterator<sizeof...(Types)>&) noexcept {
-				return true;
-			}
-		};
-
-		constexpr ct_iterator<0> begin() noexcept {
-			return {};
-		}
-		constexpr ct_iterator<sizeof...(Types)> end() noexcept {
-			return {};
-		}*/
 	};
-	/*
-	template<typename ... Types>
-	struct type {
-		typename type_list<Types...>::base_iterator it;
-
-		template<size_t index>
-		consteval type(typename type_list<Types...>::template ct_iterator<index> iter) noexcept : it(iter) {}
-		template<size_t index>
-		constexpr void operator=(const decltype(it)& iter) noexcept {
-			it = iter;
-		}
-	};
-	template<size_t index, typename ... Types>
-	type(typename type_list<Types...>::template ct_iterator<index>)->type<Types...>;
-
-	constexpr void f() noexcept {
-		for (type<int,float,double> v : type_list<int, float, double>{}) {
-			//if constexpr (v.it.get_index()) {
-
-			//}
-		}
-	}*/
 
 	// TRAIT MERGE_TYPE_LISTS
 	template<typename...>

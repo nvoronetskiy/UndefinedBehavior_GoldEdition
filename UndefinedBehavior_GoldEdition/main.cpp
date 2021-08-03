@@ -83,8 +83,10 @@ int main() {
 
 	Fctor fct;
 	volatile float fv = 3.4f;
-	// todo - consteval iterator(try)
-	// todo - расставить везде likely unlikely nodiscard etc
+	
+	// todo - чекнуть работу tuple с ссылками
+	// todo - Clang Format
+	// todo - убрать как можно больше предупреждений
 	// todo - подумать над explicit в тупле ... (сложная тема)
 	// todo - запоминать move ctor in memory block
 	constexpr bool isfctor = ::kelbon::functor<decltype([]() {})>;
@@ -104,7 +106,7 @@ int main() {
 	rv1 = act1(&value2, -2);
 
 	::kelbon::action FF1([&fv](int x) mutable -> int { fv += 1; return x * 2 + fv; });
-	// todo дополнить тесты мемори блока тестами Clone
+
 	// TODO - убрать static_asserts заменить их на requires closure
 	// TODO - перевести всё на модули
 	// TODO - CallByMemory разобраться получше

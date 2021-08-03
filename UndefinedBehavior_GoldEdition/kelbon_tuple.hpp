@@ -7,10 +7,6 @@
 
 #include "kelbon_type_traits_numeric.hpp"
 
-// todo - специализация memory_block для последовательности типов, которая в себя будет включать просто memory_block от размера, подходящего для типов
-// и там сделать deduction guide для конструктора от списка типов, чтобы писать просто значения, вместо tuple{....}
-
-
 namespace kelbon {
 
 	template<typename T, size_t index>
@@ -112,6 +108,14 @@ namespace kelbon {
 			return *this;
 		}
 	};
+	constexpr decltype(auto) if_not_ref_move(auto&& v) noexcept {
+		if constexpr (std::is_lvalue_reference_v<decltype(v)>) {
+			return v;
+		}
+		else {
+			return std::move(v);
+		}
+	}
 
 	template<size_t ... Indexes, typename ... Types>
 	struct tuple_base<true, value_list<size_t, Indexes...>, Types...> : value_in_tuple<Types, Indexes>... {
@@ -133,7 +137,7 @@ namespace kelbon {
 
 		constexpr tuple_base(tuple_base&& other)
 			noexcept(all_in_pack<std::is_nothrow_move_constructible, Types...>())
-			: value_in_tuple<Types, Indexes>(std::move(other.template get<Indexes>()))...
+			: value_in_tuple<Types, Indexes>(if_not_ref_move(other.template get<Indexes>()))...
 		{}
 		// избегание перекрытия других конструкторов, в том числе мув/копи, т.к. видимо из-за requires он выигрывает перегрузку у мув конструктора
 		template<typename ... Args>

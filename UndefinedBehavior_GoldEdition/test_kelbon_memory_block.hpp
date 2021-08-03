@@ -81,11 +81,25 @@ namespace kelbon::test {
 		tester.v = nullptr;
 	}
 
+	inline void MemoryBlockCloneTest() {
+		auto v = "abcdf";
+		memory_block block(150, 10.f, v, 16ull);
+		auto block1 = block.Clone();
+		try {
+			auto& [a, b, c, d] = block1.SafeGetDataAs<int, float, const char*, unsigned long long>();
+			if (a != 150 || b != 10.f || v != "abcdf" || d != 16ull) {
+				throw test_failed("memory block bad data after Clone");
+			}
+		}
+		catch (...) {
+			throw test_failed("memory_block stores data wrong or false positive throw exception after Clone");
+		}
+	}
 	inline void TestsForMemoryBlock() {
 		test_room tester;
 		tester.AddTest(MemoryBlockTest);
 		tester.AddTest(MemoryBlockDestroyTest);
-
+		tester.AddTest(MemoryBlockCloneTest);
 		tester.StartTesting();
 	}
 
