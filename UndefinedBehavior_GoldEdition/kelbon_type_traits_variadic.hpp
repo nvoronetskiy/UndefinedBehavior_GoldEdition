@@ -34,11 +34,21 @@ namespace kelbon {
 		using get_element = typename type_of_element<index, Types...>::type;
 	};
 
+	// TRAIT extract_type_list
+	template<typename>
+	struct extract_type_list;
+	template<template<typename...> typename Template, typename ... Types>
+	struct extract_type_list<Template<Types...>> {
+		using type = type_list<Types...>;
+	};
+
+	template<typename T>
+	using extract_type_list_t = typename extract_type_list<T>::type;
+
 	// TRAIT MERGE_TYPE_LISTS
 	template<typename...>
 	struct merge_type_lists;
 
-	// объединение списка параметров двух шаблонов(только типы)
 	template<template<typename...> typename T, template<typename...> typename U, typename ... A, typename ... B>
 	struct merge_type_lists<T<A...>, U<B...>> {
 		using type = type_list<A..., B...>;
@@ -51,6 +61,18 @@ namespace kelbon {
 
 	template<typename ... Types>
 	using merge_type_lists_t = typename merge_type_lists<Types...>::type;
+
+
+	// TRAIT insert_type_list
+	template<template<typename...> typename Template, typename TypeList>
+	struct insert_type_list;
+	template<template<typename...> typename Template, typename ... Types>
+	struct insert_type_list<Template, type_list<Types...>> {
+		using type = Template<Types...>;
+	};
+
+	template<template<typename...> typename Template, typename TypeList>
+	using insert_type_list_t = typename insert_type_list<Template, TypeList>::type;
 
 } // namespace kelbon
 

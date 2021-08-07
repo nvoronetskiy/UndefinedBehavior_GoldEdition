@@ -87,7 +87,7 @@ namespace kelbon::test {
 		auto block1 = block.Clone();
 		try {
 			auto& [a, b, c, d] = block1.SafeGetDataAs<int, float, const char*, unsigned long long>();
-			if (a != 150 || b != 10.f || v != "abcdf" || d != 16ull) {
+			if (a != 150 || b != 10.f || c != v || d != 16ull) {
 				throw test_failed("memory block bad data after Clone");
 			}
 		}
@@ -95,6 +95,7 @@ namespace kelbon::test {
 			throw test_failed("memory_block stores data wrong or false positive throw exception after Clone");
 		}
 	}
+
 	inline void TestsForMemoryBlock() {
 		test_room tester;
 		tester.AddTest(MemoryBlockTest);

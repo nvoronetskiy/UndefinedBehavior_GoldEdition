@@ -4,6 +4,7 @@
 
 #include <tuple> // structure binding specializtions
 #include <type_traits>
+#include <compare>
 
 #include "kelbon_type_traits_advanced.hpp"
 
@@ -26,27 +27,75 @@ namespace kelbon {
 			noexcept(std::is_nothrow_move_constructible_v<T>)
 			: value(std::move(value))
 		{}
-		constexpr explicit(is_explicit_copy_constructible_v<T>) value_in_tuple(const value_in_tuple&)
+
+		template<size_t other_index>
+		constexpr explicit(is_explicit_copy_constructible_v<T>) value_in_tuple(const value_in_tuple<T, other_index>& other)
 			noexcept(std::is_nothrow_copy_constructible_v<T>)
-			requires(std::is_copy_constructible_v<T>) = default;
+			requires(std::is_copy_constructible_v<T>)
+			: value(other.value)
+		{}
 
-		constexpr explicit(is_explicit_move_constructible_v<T>) value_in_tuple(value_in_tuple&&)
-			noexcept(std::is_nothrow_move_constructible_v<T>) = default;
+		template<size_t other_index>
+		constexpr explicit(is_explicit_move_constructible_v<T>) value_in_tuple(value_in_tuple<T, other_index>&& other)
+			noexcept(std::is_nothrow_move_constructible_v<T>)
+			: value(std::move(other.value))
+		{}
 
-		constexpr value_in_tuple& operator=(const value_in_tuple&)
+		template<size_t other_index>
+		constexpr value_in_tuple& operator=(const value_in_tuple<T, other_index>& other)
 			noexcept(std::is_nothrow_copy_assignable_v<T>)
-			requires(std::is_copy_constructible_v<T>) = default;
+			requires(std::is_copy_assignable_v<T>) {
+			value = other.value;
+		}
 
-		constexpr value_in_tuple& operator=(value_in_tuple&&)
-			noexcept(std::is_nothrow_move_assignable_v<T>) = default;
+		constexpr value_in_tuple& operator=(const T& other_value)
+			noexcept(std::is_nothrow_copy_assignable_v<T>)
+			requires(std::is_copy_assignable_v<T>) {
+			value = other_value;
+		}
+
+		template<size_t other_index>
+		constexpr value_in_tuple& operator=(value_in_tuple<T, other_index>&& other)
+			noexcept(std::is_nothrow_move_assignable_v<T>) {
+			value = std::move(other.value);
+		}
+
+		constexpr value_in_tuple& operator=(T&& other_value)
+			noexcept(std::is_nothrow_move_assignable_v<T>) {
+			value = std::move(other_value);
+		}
 
 		constexpr ~value_in_tuple() = default;
-		// есть вероятность, что здесь можно добавить operator spaceship <=>
+
+		template<size_t other_index>
+		constexpr auto operator <=>(const value_in_tuple<T, other_index>& other) const noexcept {
+			if (value == other.value) {
+				return std::strong_ordering::equivalent;
+			}
+			else {
+				if (value < other.value) {
+					return std::strong_ordering::less;
+				}
+				else {
+					return std::strong_ordering::greater;
+				}
+			}
+		}
+
 		T value;
 	};
 
 	template<bool, typename...>
 	struct tuple_base;
+
+	constexpr decltype(auto) if_not_ref_move(auto&& v) noexcept {
+		if constexpr (std::is_lvalue_reference_v<decltype(v)>) {
+			return v;
+		}
+		else {
+			return std::move(v);
+		}
+	}
 
 	// COPY CONSTRUCTOR AND BUG IN MSVC (requires and other shit cant delete copy constructor) FORCE ME INTO CREATE TWO SPECIALIZTIONS OF TUPLE HERE... GOD FORGIVE ME
 
@@ -111,14 +160,6 @@ namespace kelbon {
 			return *this;
 		}
 	};
-	constexpr decltype(auto) if_not_ref_move(auto&& v) noexcept {
-		if constexpr (std::is_lvalue_reference_v<decltype(v)>) {
-			return v;
-		}
-		else {
-			return std::move(v);
-		}
-	}
 
 	template<size_t ... Indexes, typename ... Types>
 	struct tuple_base<true, value_list<size_t, Indexes...>, Types...> : value_in_tuple<Types, Indexes>... {
@@ -182,7 +223,73 @@ namespace kelbon {
 	public:
 		using base_t::base_t;
 	};
-	
+
+	// TEMPLATE FUNCTION tuple_cat
+	/*
+	template<typename...>
+	struct tuple_cat_helper;
+
+	template<typename ... Types1, typename ... Types2, size_t ... V1, size_t ... V2>
+	struct tuple_cat_helper<tuple<Types1...>, tuple<Types2...>, value_list<size_t, V1...>, value_list<size_t, V2...>> {
+		static constexpr auto cat(tuple<Types1...>&& tpl1, tuple<Types2...>&& tpl2) noexcept(false) { // todo - noexcept
+			return tuple<Types1..., Types2...>(std::forward<tuple<Types1...>>(tpl1).template get<V1>()..., std::forward<tuple<Types1...>>(tpl2).template get<V2>()...);
+		}
+	};
+
+	template<typename ... Types1, typename ... Types2>
+	constexpr auto tuple_cat(tuple<Types1...>&& tpl1, tuple<Types2...>&& tpl2) // todo - noexcept
+		noexcept(false) {
+
+		return tuple_cat_helper<tuple<Types1...>, tuple<Types2...>,
+			make_value_list<size_t, sizeof...(Types1)>,
+			make_value_list<size_t, sizeof...(Types2)>>::cat(std::forward<tuple<Types1...>>(tpl1), std::forward<tuple<Types2...>>(tpl2));
+	}
+
+	template<typename ... Types1, typename ... Types2, typename ... Tuples>
+	constexpr auto tuple_cat(tuple<Types1...>&& tpl1, tuple<Types2...>&& tpl2, Tuples&& ... tuples) // todo - noexcept
+		noexcept(false)
+		->insert_type_list_t<::kelbon::tuple, merge_type_lists_t<Tuples...>> {
+		//using type_array = merge_type_lists_t<Tuples...>;
+		//using big_tuple_t = insert_type_list_t<::kelbon::tuple, type_array>;
+		// for iterating throught index_array
+		//using indexes = make_value_list<size_t, type_array::count_of_arguments>;
+		//using tuple_length_array = value_list<size_t, extract_type_list_t<Tuples>::count_of_arguments ...>;
+		//using index_array = merge_value_lists_t<make_value_list<size_t, extract_type_list_t<Tuples>::count_of_arguments> ...>;
+
+		return tuple_cat
+		(tuple_cat_helper<tuple<Types1...>, tuple<Types2...>,
+			make_value_list<size_t, sizeof...(Types1)>,
+			make_value_list<size_t, sizeof...(Types2)>>::cat(std::forward<tuple<Types1...>>(tpl1), std::forward<tuple<Types2...>>(tpl2)),
+			std::forward<Tuples>(tpl1)...);
+	}*/
+	template<size_t i>
+	struct increment {
+		static constexpr int value = i + 1;
+	};
+
+	template<typename ... Tuples, size_t ... TupleIndexes, size_t ... IndexesInTuple>
+	constexpr auto tuple_cat_helper2(value_list<size_t, TupleIndexes...>, value_list<size_t, IndexesInTuple...>, tuple<Tuples...>&& megatuple) {
+		using type_array = merge_type_lists_t<std::decay_t<Tuples>...>;
+		using big_tuple_t = insert_type_list_t<tuple, type_array>;
+		// ещё проблема, && не достать, т.к. & в get всегда её перебьёт...
+		return big_tuple_t(std::forward<tuple<Tuples...>>(megatuple).template get<TupleIndexes>().template get<IndexesInTuple>()...); // todo - add forward here
+	}
+	template<typename ... Tuples, size_t ... Values, size_t ... Indexes>
+	constexpr decltype(auto) tuple_cat_helper1(value_list<size_t, Values...>, value_list<size_t, Indexes...>, tuple<Tuples...>&& megatuple) {
+		using tuple_indexes = merge_value_lists_t<make_value_list<size_t, extract_type_list_t<decay_t<Tuples>>::count_of_arguments, Values, 0ull>...>; // TRICKY))))))
+
+		return tuple_cat_helper2(tuple_indexes{}, value_list<size_t, Indexes...>{}, std::forward<tuple<Tuples...>>(megatuple));
+	}
+
+	template<typename ... Tuples>
+	constexpr auto tuple_cat(Tuples&& ... tuples) // todo - noexcept
+		noexcept(false) {
+		using index_array = merge_value_lists_t<make_value_list<size_t, extract_type_list_t<decay_t<Tuples>>::count_of_arguments>...>;
+		// ТОЧНО!!! Нужно просто сделать value sequence где будут длина тупла индексов 0, дальше длина второго тупла индексов 1 и т.д.!! И можно будет раскрыть по
+		// двум одновременно!
+		return tuple_cat_helper1(make_value_list<size_t, sizeof...(Tuples)>{}, index_array{}, tuple<Tuples&&...>(std::forward<Tuples>(tuples)...));
+	}
+
 	// deduction guide
 	// чтобы этот гайд не перекрывал возможность move конструктора тут enable_if
 	template<typename First, typename ... Types>

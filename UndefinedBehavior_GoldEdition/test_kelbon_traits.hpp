@@ -56,7 +56,7 @@ namespace kelbon::test {
 			same_as<void, function_info<DecayTest>::result_type> &&
 			same_as<typename function_info<[](float, int) { return true; }>::parameter_list, type_list<float, int>> &&
 			// lambdas with capture have no default constructor, so it cant be sended into function_info like template parameter
-			same_as<typename signature<decltype([test_value](float) {return true; })>::parameter_list, type_list<float>>;
+			same_as<typename signature<decltype([test_value](float) {return test_value; })>::parameter_list, type_list<float>>;
 
 		static_assert(test_value, "signature trait fails test");
 	}

@@ -67,7 +67,7 @@ namespace kelbon {
 			noexcept(std::is_nothrow_default_constructible_v<memory_block<Size>>)
 			: memory(), invoker(nullptr)
 		{}
-		constexpr action(action&& other)
+		constexpr action(action&& other) noexcept
 			: memory(std::move(other.memory)), invoker(other.invoker) {
 			other.invoker = nullptr;
 		}
@@ -75,7 +75,9 @@ namespace kelbon {
 		// in case value is a SomeType& template parameter, so its not callable,
 		// its good behavior because memory_block takes control over actor
 		template<callable Actor>
-		constexpr action(Actor&& actor) : memory(std::forward<Actor>(actor)) {
+		constexpr action(Actor&& actor)
+			noexcept(std::is_nothrow_constructible_v<memory_block<Size>, decltype(actor)>)
+			: memory(std::forward<Actor>(actor)) {
 			static_assert(func::returns<Actor, ResultType>, "Incorrect result type of the function");
 			static_assert(func::accepts<Actor, ArgTypes...>, "Incorrent argument list of the function");
 			RememberHowToCall<Actor>();
@@ -129,10 +131,13 @@ namespace kelbon {
 		}
 
 		
-		[[nodiscard]] constexpr bool Empty() const noexcept {
+		[[nodiscard]] constexpr inline bool Empty() const noexcept {
 			return invoker == nullptr;
 		}
-
+		// use it before Clone method if you want to not catch exception
+		[[nodiscard]] constexpr inline bool CanBeCopiedNow() const noexcept {
+			return memory.CanBeCopied();
+		}
 		
 		constexpr ResultType operator()(ArgTypes ... args) const {
 			if (Empty()) [[unlikely]] {

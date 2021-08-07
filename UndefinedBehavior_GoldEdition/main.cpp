@@ -20,21 +20,10 @@
 
 #include "kelbon_action.hpp"
 
-
-// todo - слушатель, который просто передаёт инфу слушающим дальше, подключенным к нему(позволяет делать только 1 указатель на слушателя в объектах/потоке физики, передавать сообщение
-// и он уже выбирает кому нужно сообщение, например слушатели физики / конкретных каких то вещей.
-
 using namespace kelbon::test;
 
 // todo - cmake for this project
 // todo - проверить на gcc
-
-// todo - сделать так, чтобы в act_wrapper можно было записывать любой callable, ведущий себя также. Напирмер лямбда int(float )это то же самое, что и функция int(float)
-// для этого нужно хранить memory_block, в котором хранить любой callble, написать оператор=, принимающий любой 1 callble с такими же return и args, 
-// а ещё запоминать как Destroy как вызывать функцию(Call), то есть нужно запомнить функцию принимающую memory_block по ссылке(константной)
-//  и возвращающую указатель на функцию, которую нужно вызывать... Сигнатура которой известна. Внутри запоминающей функции очевидно будет block.GetDataAs<Actor>()
-
-
 
 int testF(int x) {
 	return x * 2;
@@ -48,9 +37,7 @@ struct Fctor {
 		return v * 2;
 	}
 	explicit Fctor() = default;
-	//Fctor(const Fctor&) {
-	//	std::cout << "copy\n";
-	//}
+
 	Fctor(Fctor&&) noexcept {
 		std::cout << "move\n";
 	}
@@ -70,7 +57,7 @@ struct s {
 	s& operator=(const s&) = default;
 	int method(float fv) const volatile & noexcept {
 		std::cout << "10";
-		return v + fv;
+		return static_cast<int>(static_cast<float>(v) + fv);
 	}
 	void operator()(int,float) const {
 
@@ -78,21 +65,25 @@ struct s {
 };
 
 int main() {
-	// todo - сделать так чтобы с аргументами работало тоже
+	constexpr ::kelbon::tuple tpl(3, 4.f, 'c');
+	constexpr auto cxtv = tpl.get<2>();
+	auto mmmm = tpl.get<2>();
+	std::cout << mmmm;
+	constexpr ::kelbon::value_in_tuple<int, 0> spaceship1(10);
+	constexpr ::kelbon::value_in_tuple<int, 10> spaceship2(20);
+	constexpr bool spbv = spaceship1 > spaceship2;
+
 	constexpr bool sss = ::kelbon::is_explicit_constructible_v<s>;
 	constexpr bool waw = ::kelbon::is_explicit_constructible_v<Fctor>;
 	::kelbon::action myf = [](int v) {return v; };
 
 	Fctor fct;
 	volatile float fv = 3.4f;
-
-	// todo - atleast one in pack, all in pack сделать это шаблонными переменными
+	kelbon::tuple t(1, 2, 3);
+	constexpr auto tuplecatresult = ::kelbon::tuple_cat(tpl, ::kelbon::tuple(1, 2, 3)); // tpl check
+	auto tcatres1 = kelbon::tuple_cat(tpl, t, kelbon::tuple('c', 10, 150.f, nullptr));
 	// todo -fixed string, которую можно передавать как шаблонный параметр + user defined literal, который её создает из const char*
-	// todo - чекнуть работу tuple с ссылками
 	// todo - Clang Format
-	// todo - убрать как можно больше предупреждений
-	// todo - подумать над explicit в тупле ... (сложная тема) (тупо explicit(bool) поставить, но для этого нужно написать трейт/концепт explciit constructible)
-	// todo - запоминать move ctor in memory block
 	constexpr bool isfctor = ::kelbon::functor<decltype([]() {})>;
 	::kelbon::action<int(s*, float)> act = &s::method;
 	s value1(15);
@@ -109,14 +100,12 @@ int main() {
 	act1 = act.Clone();
 	rv1 = act1(&value2, -2);
 
-	::kelbon::action FF1([&fv](int x) mutable -> int { fv += 1; return x * 2 + fv; });
+	::kelbon::action FF1([&fv](int x) mutable -> int { fv += 1; return static_cast<int>(static_cast<float>(x * 2) + fv); });
 
-	// TODO - убрать static_asserts заменить их на requires closure
 	// TODO - перевести всё на модули
-	// TODO - CallByMemory разобраться получше
-
 	// Модули - можно ли экспортировать только одну специализацию???
 	// todo - попробовать запустить code cleanup (на другой ветке гита)
+
 	auto m1 = FF1.Clone();
 	FF1(10);
 	FF1(10);
@@ -129,7 +118,7 @@ int main() {
 	FF1 = &Fctor::method;
 	FF1 = [&fv](int v) -> int {
 		std::cout << "Mda";
-		return 150 + fv + v; };
+		return static_cast<int>(static_cast<float>(150 + v) + fv); };
 
 	FF1 = Fctor{};
 	FF1 = std::move(fct);

@@ -2,8 +2,6 @@
 #ifndef KELBON_MEMORY_BLOCK_HPP
 #define KELBON_MEMORY_BLOCK_HPP
 
-#include <algorithm> // std::copy, memcpy, memset + traits
-
 #include "kelbon_tuple.hpp"
 
 namespace kelbon {
@@ -23,10 +21,11 @@ namespace kelbon {
 		virtual constexpr inline bool is_trivially_destructible() const noexcept = 0;
 		virtual constexpr inline bool is_move_constructible() const noexcept = 0;
 		virtual constexpr inline bool is_copy_constructible() const noexcept = 0;
+		virtual constexpr inline bool is_nothrow_copy_constructible() const noexcept = 0;
 	};
 
 	// false false case
-	template<typename T, bool IsNotTriviallyDestructible, bool IsCopyConstructible, bool IsMoveConstructible>
+	template<typename T>
 	requires(std::destructible<T>)
 	struct remember_type_info final
 		: base_remember_type_info {
@@ -45,7 +44,7 @@ namespace kelbon {
 		}
 
 		constexpr void Copy(const void* srs, void* dest) const noexcept(std::is_nothrow_copy_constructible_v<T>) override {
-			if constexpr (IsCopyConstructible) {
+			if constexpr (std::is_copy_constructible_v<T>) {
 				new (dest) T(*(reinterpret_cast<const T*>(srs)));
 			}
 			else {
@@ -53,14 +52,17 @@ namespace kelbon {
 			}
 		}
 
+		[[nodiscard]] constexpr inline bool is_nothrow_copy_constructible() const noexcept override {
+			return std::is_nothrow_copy_constructible_v<T>;
+		}
 		[[nodiscard]] constexpr inline bool is_trivially_destructible() const noexcept override {
-			return !IsNotTriviallyDestructible;
+			return std::is_trivially_destructible_v<T>;
 		}
 		[[nodiscard]] constexpr inline bool is_move_constructible() const noexcept override {
-			return IsMoveConstructible;
+			return std::is_move_constructible_v<T>;
 		}
 		[[nodiscard]] constexpr inline bool is_copy_constructible() const noexcept override {
-			return IsCopyConstructible;
+			return std::is_copy_constructible_v<T>;
 		}
 	};
 
@@ -74,7 +76,7 @@ namespace kelbon {
 		char  data[max_size]; // память под хранение любых входных данных
 		void* memory;     // всё что лежит в классе-запоминателе деструктора - указатель на таблицу виртуальных функций
 
-		void Clear() noexcept {
+		constexpr void Clear() noexcept {
 			if (memory == nullptr) [[unlikely]] {
 				return;
 			}
@@ -82,43 +84,49 @@ namespace kelbon {
 			reinterpret_cast<base_remember_type_info*>(&memory)->Destroy(data);
 			memory = nullptr;
 		}
-		const base_remember_type_info* const GetRTTI() const noexcept {
+		constexpr const base_remember_type_info* const GetRTTI() const noexcept {
 			return reinterpret_cast<const base_remember_type_info* const>(&memory);
 		}
 	public:
 		constexpr memory_block() noexcept : data{ 0 }, memory(nullptr) {}
 
+		// DO NOT THROW IF COPY CONSTUCTOR THROWING!!!
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
-		memory_block(TupleType<Types...>&& value) noexcept {
+		constexpr explicit memory_block(TupleType<Types...>&& value) noexcept : data{ 0 } {
 			using Tuple = TupleType<Types...>;
 			static_assert(std::is_copy_constructible_v<Tuple> || (std::is_move_constructible_v<Tuple> && std::is_nothrow_move_constructible_v<Tuple>),
 				"Object is non copyble and non-movable, its useless to store it here");
-			//realmemmove(data, &value, sizeof(Tuple));
-			// по сути здесь происходит запоминание деструктора, прямо в значении указателя я конструирую класс(т.к. он состоит из всего одного указателя на vtable)
-			new(&memory)
-				remember_type_info<Tuple,
-				!std::is_trivially_destructible_v<Tuple>,
-				std::is_copy_constructible_v<Tuple>,
-				std::is_move_constructible_v<Tuple>>{};
+
+			new(&memory) remember_type_info<Tuple>{};
 
 			if constexpr (std::is_move_constructible_v<Tuple>) {
 				GetRTTI()->Move(&value, data);
 			}
 			else { // here Tuple is copible, because of static_assert here
-				GetRTTI()->Copy(&value, data);
+				if constexpr (std::is_nothrow_copy_constructible_v<Tuple>) {
+					GetRTTI()->Copy(&value, data);
+				}
+				else {
+					try {
+						GetRTTI()->Copy(&value, data);
+					}
+					catch (...) {
+						// nothing to do, just because i want noexcept constructor
+					}
+				}
 			}
 		}
 
 		template<typename ... Types>
 		requires (sizeof(TupleType<std::remove_reference_t<Types>...>) <= max_size)
-		memory_block(Types&& ... args)
+		constexpr memory_block(Types&& ... args)
 			noexcept(std::is_nothrow_constructible_v<TupleType<std::remove_reference_t<Types>...>, Types...>)
 			: memory_block(TupleType<std::remove_reference_t<Types>...>(std::forward<Types>(args)...))
 		{}
 
-		// not noexcept, if value non-movable and throw constructible
+		// DO NOT THROW IF COPY CONSTUCTOR THROWING!!!
 		template<size_t other_max_size> requires(other_max_size <= max_size)
-		memory_block(memory_block<other_max_size, TupleType>&& other) : memory(other.memory) {
+		constexpr memory_block(memory_block<other_max_size, TupleType>&& other) noexcept : memory(other.memory), data{ 0 } {
 			// other is empty block
 			if (other.memory == nullptr) [[unlikely]] {
 				return;
@@ -128,12 +136,18 @@ namespace kelbon {
 				RTTI->Move(other.data, data);
 			}
 			else { // here we know RTTI.copy constructible == true, because of check in other constructor(static_assert)
-				RTTI->Copy(other.data, data);
+				try {
+					RTTI->Copy(other.data, data);
+				}
+				catch (...) {
+					// nothing, just for noexcept
+				}
 			}
 		}
-		// not noexcept, if value non-movable and throw constructible
+
+		// DO NOT THROW IF COPY CONSTUCTOR THROWING!!!
 		template<size_t other_max_size> requires(other_max_size <= max_size)
-		memory_block& operator=(memory_block<other_max_size, TupleType>&& other) {
+		constexpr memory_block& operator=(memory_block<other_max_size, TupleType>&& other) noexcept {
 			if (&other == this) [[unlikely]] {
 				return *this;
 			}
@@ -148,13 +162,18 @@ namespace kelbon {
 				RTTI->Move(other.data, data);
 			}
 			else { // here we know RTTI.copy constructible == true, because of check in other constructor(static_assert)
-				RTTI->Copy(other.data, data);
+				try {
+					RTTI->Copy(other.data, data);
+				}
+				catch (...) {
+					// nothing, just for noexcept
+				}
 			}
 			return *this;
 		}
 
 		// may throw double_free_possible if no avalible copy constructor for stored value
-		[[nodiscard]] memory_block Clone() const {
+		[[nodiscard]] constexpr memory_block Clone() const {
 			if (!CanBeCopied()) [[unlikely]] {
 				throw double_free_possible("no copy constructor avalible for stored value (kelbon::memory_block::Clone)");
 			}
@@ -164,20 +183,20 @@ namespace kelbon {
 			return clone;
 		}
 		
-		[[nodiscard]] bool IsTriviallyDestructibleNow() const noexcept {
+		[[nodiscard]] constexpr inline bool IsTriviallyDestructibleNow() const noexcept {
 			if (memory == nullptr) [[unlikely]] {
 				return true;
 			}
 			return GetRTTI()->is_trivially_destructible();
 		}
-		[[nodiscard]] bool CanBeMoved() const noexcept {
+		[[nodiscard]] constexpr inline bool CanBeMoved() const noexcept {
 			if (memory == nullptr) [[unlikely]] {
 				return true;
 			}
 			return GetRTTI()->is_move_constructible();
 		}
-		// check it before using Clone method if you want to not catch exception
-		[[nodiscard]] bool CanBeCopied() const noexcept {
+		// use it for check before using Clone method if you want to not catch exception
+		[[nodiscard]] constexpr inline bool CanBeCopied() const noexcept {
 			if (memory == nullptr) [[unlikely]] {
 				return true;
 			}
@@ -185,24 +204,18 @@ namespace kelbon {
 		}
 
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
-		[[nodiscard]] const TupleType<Types...>& GetDataAs() const noexcept {
-			// bit_cast не подходит, потому что он не работает для объектов с нетривиальными копи конструкторами
-			// копировать или даже создавать std::tuple<Types...> нельзя, т.к. может не оказаться конструкторов копирования/дефолтных
-			// остаётся лишь один вариант - возвращать ссылку на свои данные. И при этом запретить их менять
+		[[nodiscard]] constexpr const TupleType<Types...>& GetDataAs() const noexcept {
 			return *(reinterpret_cast<const TupleType<Types...>* const>(data));
 		}
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
-		[[nodiscard]] TupleType<Types...>& GetDataAs() noexcept {
+		[[nodiscard]] constexpr TupleType<Types...>& GetDataAs() noexcept {
 			return *(reinterpret_cast<TupleType<Types...>*>(const_cast<char*>(data)));
 		}
 		// same as GetDataAs, but with checking if right types you trying to get, if not - exception thrown
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
-		[[nodiscard]] const TupleType<Types...>& SafeGetDataAs() const {
-			auto check_value =
-				remember_type_info<TupleType<Types...>,
-				!std::is_trivially_destructible_v<TupleType<Types...>>,
-				std::is_copy_constructible_v<TupleType<Types...>>,
-				std::is_move_constructible_v<TupleType<Types...>>>{};
+		[[nodiscard]] constexpr const TupleType<Types...>& SafeGetDataAs() const {
+
+			auto check_value = remember_type_info<TupleType<Types...>>{};
 
 			if ((*(reinterpret_cast<void**>(&check_value))) != memory) {
 				throw bad_memory_block_access(
@@ -211,7 +224,7 @@ namespace kelbon {
 			}
 			return GetDataAs<Types...>();
 		}
-		~memory_block() {
+		constexpr ~memory_block() {
 			Clear();
 		}
 	};

@@ -21,6 +21,7 @@ namespace kelbon {
 	[[nodiscard]] consteval inline bool always_false(auto) noexcept { return false; }
 	template<typename T>
 	[[nodiscard]] consteval inline bool always_false() noexcept { return false; }
+
 } // namespace kelbon
 
 #endif // !KELBON_UTILITY_HPP

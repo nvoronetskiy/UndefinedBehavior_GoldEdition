@@ -44,21 +44,21 @@ namespace kelbon::test {
 	});
 
 	inline void FunctionsTest() {
-		testf2 functor;
+		testf2 functorv;
 		int v1 = 10;
 		float v2 = 15.f;
 		//::kelbon::tuple tt(testf2{});
-		::kelbon::tuple tt1(std::move(functor));
+		::kelbon::tuple tt1(std::move(functorv));
 		action<std::string(size_t, char)> act1;
 		action act2(&testf); // Todo научиться принимать без &
 		action act3(&testf);
 		action act4(testf2{});
 		// забирается владение передаваемой сущностью, так что конструктора на не мув версию нет
-		action act5(std::move(functor));
+		action act5(std::move(functorv));
 		action act6(test_lambda{});
 		action act7([v1, &v2](size_t size, char c) mutable noexcept ->std::string {
 			v2 *= 2;
-			v2 += v1;
+			v2 += static_cast<float>(v1);
 			return std::string(size, c);
 		});
 
@@ -75,7 +75,7 @@ namespace kelbon::test {
 
 			throw test_failed("kelbon::action Clone dont throw exception when needed");
 		}
-		catch (const double_free_possible& msg) {
+		catch (const double_free_possible&) {
 			// good way
 		}
 		fs[4] = std::move(act5);

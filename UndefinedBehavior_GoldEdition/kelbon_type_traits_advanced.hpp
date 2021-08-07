@@ -34,6 +34,23 @@ namespace kelbon {
 		static constexpr T get_element = value_of_element<index, T, Values...>::value;
 	};
 
+	// TRAIT merge_value_lists
+	template<typename...>
+	struct merge_value_lists;
+
+	template<typename T, T ... A, T ... B>
+	struct merge_value_lists<value_list<T, A...>, value_list<T, B...>> {
+		using type = value_list<T, A..., B...>;
+	};
+
+	template<typename T, T ... A, T ... B, typename ... Types>
+	struct merge_value_lists<value_list<T, A...>, value_list<T, B...>, Types...> {
+		using type = typename merge_value_lists<value_list<T, A..., B...>, Types...>::type;
+	};
+
+	template<typename ... Types>
+	using merge_value_lists_t = typename merge_value_lists<Types...>::type;
+
 	// TRAIT make_value_sequence
 	namespace detail {
 		template<numeric T, T...>
