@@ -223,70 +223,43 @@ namespace kelbon {
 	public:
 		using base_t::base_t;
 	};
+	
+	//template<typename...>
+	//struct help;
+	//template<size_t ... A, size_t ... B,
 
 	// TEMPLATE FUNCTION tuple_cat
-	/*
-	template<typename...>
-	struct tuple_cat_helper;
-
-	template<typename ... Types1, typename ... Types2, size_t ... V1, size_t ... V2>
-	struct tuple_cat_helper<tuple<Types1...>, tuple<Types2...>, value_list<size_t, V1...>, value_list<size_t, V2...>> {
-		static constexpr auto cat(tuple<Types1...>&& tpl1, tuple<Types2...>&& tpl2) noexcept(false) { // todo - noexcept
-			return tuple<Types1..., Types2...>(std::forward<tuple<Types1...>>(tpl1).template get<V1>()..., std::forward<tuple<Types1...>>(tpl2).template get<V2>()...);
-		}
-	};
-
-	template<typename ... Types1, typename ... Types2>
-	constexpr auto tuple_cat(tuple<Types1...>&& tpl1, tuple<Types2...>&& tpl2) // todo - noexcept
-		noexcept(false) {
-
-		return tuple_cat_helper<tuple<Types1...>, tuple<Types2...>,
-			make_value_list<size_t, sizeof...(Types1)>,
-			make_value_list<size_t, sizeof...(Types2)>>::cat(std::forward<tuple<Types1...>>(tpl1), std::forward<tuple<Types2...>>(tpl2));
-	}
-
-	template<typename ... Types1, typename ... Types2, typename ... Tuples>
-	constexpr auto tuple_cat(tuple<Types1...>&& tpl1, tuple<Types2...>&& tpl2, Tuples&& ... tuples) // todo - noexcept
-		noexcept(false)
-		->insert_type_list_t<::kelbon::tuple, merge_type_lists_t<Tuples...>> {
-		//using type_array = merge_type_lists_t<Tuples...>;
-		//using big_tuple_t = insert_type_list_t<::kelbon::tuple, type_array>;
-		// for iterating throught index_array
-		//using indexes = make_value_list<size_t, type_array::count_of_arguments>;
-		//using tuple_length_array = value_list<size_t, extract_type_list_t<Tuples>::count_of_arguments ...>;
-		//using index_array = merge_value_lists_t<make_value_list<size_t, extract_type_list_t<Tuples>::count_of_arguments> ...>;
-
-		return tuple_cat
-		(tuple_cat_helper<tuple<Types1...>, tuple<Types2...>,
-			make_value_list<size_t, sizeof...(Types1)>,
-			make_value_list<size_t, sizeof...(Types2)>>::cat(std::forward<tuple<Types1...>>(tpl1), std::forward<tuple<Types2...>>(tpl2)),
-			std::forward<Tuples>(tpl1)...);
-	}*/
-	template<size_t i>
-	struct increment {
-		static constexpr int value = i + 1;
-	};
-
 	template<typename ... Tuples, size_t ... TupleIndexes, size_t ... IndexesInTuple>
-	constexpr auto tuple_cat_helper2(value_list<size_t, TupleIndexes...>, value_list<size_t, IndexesInTuple...>, tuple<Tuples...>&& megatuple) {
-		using type_array = merge_type_lists_t<std::decay_t<Tuples>...>;
+	constexpr auto tuple_cat_helper2(value_list<size_t, TupleIndexes...>, value_list<size_t, IndexesInTuple...>, tuple<Tuples...>&& megatuple)
+		noexcept(std::is_nothrow_constructible_v<insert_type_list_t<tuple, merge_type_lists_t<decay_t<Tuples>...>>,
+			typename extract_type_list_t<decay_t<typename type_list<Tuples...>::template get_element<TupleIndexes>>>::template get_element<IndexesInTuple>...>) {
+		using type_array = merge_type_lists_t<decay_t<Tuples>...>;
 		using big_tuple_t = insert_type_list_t<tuple, type_array>;
-		// ещё проблема, && не достать, т.к. & в get всегда её перебьёт...
+
 		return big_tuple_t(std::forward<tuple<Tuples...>>(megatuple).template get<TupleIndexes>().template get<IndexesInTuple>()...); // todo - add forward here
 	}
 	template<typename ... Tuples, size_t ... Values, size_t ... Indexes>
-	constexpr decltype(auto) tuple_cat_helper1(value_list<size_t, Values...>, value_list<size_t, Indexes...>, tuple<Tuples...>&& megatuple) {
+	constexpr decltype(auto) tuple_cat_helper1(value_list<size_t, Values...>, value_list<size_t, Indexes...>, tuple<Tuples...>&& megatuple)
+		noexcept(noexcept(
+			tuple_cat_helper2(
+				std::declval<merge_value_lists_t<make_value_list<size_t, extract_type_list_t<decay_t<Tuples>>::count_of_arguments, Values, 0ull>...>>(),
+				std::declval<value_list<size_t, Indexes...>>(),
+				std::declval<tuple<Tuples...>>()
+			))) {
 		using tuple_indexes = merge_value_lists_t<make_value_list<size_t, extract_type_list_t<decay_t<Tuples>>::count_of_arguments, Values, 0ull>...>; // TRICKY))))))
 
 		return tuple_cat_helper2(tuple_indexes{}, value_list<size_t, Indexes...>{}, std::forward<tuple<Tuples...>>(megatuple));
 	}
 
 	template<typename ... Tuples>
-	constexpr auto tuple_cat(Tuples&& ... tuples) // todo - noexcept
-		noexcept(false) {
+	constexpr auto tuple_cat(Tuples&& ... tuples)
+		noexcept(noexcept(
+			tuple_cat_helper1(
+				std::declval<make_value_list<size_t, sizeof...(Tuples)>>(),
+				std::declval<merge_value_lists_t<make_value_list<size_t, extract_type_list_t<decay_t<Tuples>>::count_of_arguments>...>>(),
+				std::declval<tuple<Tuples&&...>>())))
+		{ //		->insert_type_list_t<tuple, merge_type_lists_t<extract_type_list_t<Tuples>...>>
 		using index_array = merge_value_lists_t<make_value_list<size_t, extract_type_list_t<decay_t<Tuples>>::count_of_arguments>...>;
-		// ТОЧНО!!! Нужно просто сделать value sequence где будут длина тупла индексов 0, дальше длина второго тупла индексов 1 и т.д.!! И можно будет раскрыть по
-		// двум одновременно!
 		return tuple_cat_helper1(make_value_list<size_t, sizeof...(Tuples)>{}, index_array{}, tuple<Tuples&&...>(std::forward<Tuples>(tuples)...));
 	}
 
@@ -294,10 +267,10 @@ namespace kelbon {
 	// чтобы этот гайд не перекрывал возможность move конструктора тут enable_if
 	template<typename First, typename ... Types>
 	tuple(First&&, Types&& ...)->tuple<
-		std::enable_if_t<
-		!std::same_as<decay_t<First>, tuple<std::remove_reference_t<First>, std::remove_reference_t<Types>...>>,
-		std::remove_reference_t<First>>,
-		std::remove_reference_t<Types>...
+		::std::enable_if_t<
+		!::std::same_as<decay_t<First>, tuple<::std::remove_reference_t<First>, ::std::remove_reference_t<Types>...>>,
+		::std::remove_reference_t<First>>,
+		::std::remove_reference_t<Types>...
 		>;
 
 } // namespace kelbon

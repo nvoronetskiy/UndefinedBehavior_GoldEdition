@@ -68,7 +68,7 @@ int main() {
 	constexpr ::kelbon::tuple tpl(3, 4.f, 'c');
 	constexpr auto cxtv = tpl.get<2>();
 	auto mmmm = tpl.get<2>();
-	std::cout << mmmm;
+	std::cout << mmmm << std::endl;
 	constexpr ::kelbon::value_in_tuple<int, 0> spaceship1(10);
 	constexpr ::kelbon::value_in_tuple<int, 10> spaceship2(20);
 	constexpr bool spbv = spaceship1 > spaceship2;
@@ -81,6 +81,8 @@ int main() {
 	volatile float fv = 3.4f;
 	kelbon::tuple t(1, 2, 3);
 	constexpr auto tuplecatresult = ::kelbon::tuple_cat(tpl, ::kelbon::tuple(1, 2, 3)); // tpl check
+	constexpr bool v = noexcept(::kelbon::tuple_cat(tpl, ::kelbon::tuple(1, 2, 3)));
+	std::cout << "v=" << v << std::endl;
 	auto tcatres1 = kelbon::tuple_cat(tpl, t, kelbon::tuple('c', 10, 150.f, nullptr));
 	// todo -fixed string, которую можно передавать как шаблонный параметр + user defined literal, который её создает из const char*
 	// todo - Clang Format
