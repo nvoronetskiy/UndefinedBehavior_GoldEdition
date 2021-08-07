@@ -223,10 +223,6 @@ namespace kelbon {
 	public:
 		using base_t::base_t;
 	};
-	
-	//template<typename...>
-	//struct help;
-	//template<size_t ... A, size_t ... B,
 
 	// TEMPLATE FUNCTION tuple_cat
 	template<typename ... Tuples, size_t ... TupleIndexes, size_t ... IndexesInTuple>
