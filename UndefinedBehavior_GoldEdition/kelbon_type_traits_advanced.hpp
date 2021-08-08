@@ -4,6 +4,7 @@
 
 #include "kelbon_concepts_base.hpp"
 #include "kelbon_utility.hpp"
+#include "kelbon_type_traits_variadic.hpp"
 
 namespace kelbon {
 

@@ -5,7 +5,7 @@
 
 #include <type_traits>
 
-#include "kelbon_type_traits_functional.hpp"
+#include "kelbon_concepts_functional.hpp"
 
 namespace kelbon {
 

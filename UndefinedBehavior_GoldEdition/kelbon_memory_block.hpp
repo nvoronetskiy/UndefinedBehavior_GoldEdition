@@ -2,6 +2,8 @@
 #ifndef KELBON_MEMORY_BLOCK_HPP
 #define KELBON_MEMORY_BLOCK_HPP
 
+#include <exception>
+
 #include "kelbon_tuple.hpp"
 
 namespace kelbon {

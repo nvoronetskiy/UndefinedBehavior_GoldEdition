@@ -6,7 +6,9 @@
 #include <type_traits>
 #include <compare>
 
+#include "kelbon_type_traits_base.hpp"
 #include "kelbon_type_traits_advanced.hpp"
+#include "kelbon_type_traits_variadic.hpp"
 
 namespace kelbon {
 
