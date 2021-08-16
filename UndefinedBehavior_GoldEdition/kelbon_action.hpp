@@ -75,11 +75,10 @@ namespace kelbon {
 		// in case value is a SomeType& template parameter, so its not callable,
 		// its good behavior because memory_block takes control over actor
 		template<callable Actor>
+		requires(func::returns<Actor, ResultType>&& func::accepts<Actor, ArgTypes...>)
 		constexpr action(Actor&& actor)
 			noexcept(std::is_nothrow_constructible_v<memory_block<Size>, decltype(actor)>)
 			: memory(std::forward<Actor>(actor)) {
-			static_assert(func::returns<Actor, ResultType>, "Incorrect result type of the function");
-			static_assert(func::accepts<Actor, ArgTypes...>, "Incorrent argument list of the function");
 			RememberHowToCall<Actor>();
 		}
 
@@ -93,17 +92,16 @@ namespace kelbon {
 
 		// for lambdas, functors
 		template<callable Actor>
+		requires(func::returns<Actor, ResultType>&& func::accepts<Actor, ArgTypes...>)
 		constexpr action& operator=(Actor&& something) noexcept {
-			static_assert(func::returns<Actor, ResultType>, "Incorrect result type of the function");
-			static_assert(func::accepts<Actor, ArgTypes...>, "Incorrent argument list of the function");
+
 			memory = memory_block<Size, ::kelbon::tuple>(std::forward<Actor>(something));
 			RememberHowToCall<Actor>();
 			return *this;
 		}
-		template<typename Actor> requires (functor<Actor>&& std::is_copy_constructible_v<Actor>)
+		template<typename Actor>
+		requires (functor<Actor>&& std::is_copy_constructible_v<Actor> && func::returns<Actor, ResultType>&& func::accepts<Actor, ArgTypes...>)
 		constexpr action& operator=(const Actor& something) noexcept(std::is_nothrow_copy_constructible_v<Actor>) {
-			static_assert(func::returns<Actor, ResultType>, "Incorrect result type of the function");
-			static_assert(func::accepts<Actor, ArgTypes...>, "Incorrent argument list of the function");
 			Actor copy = something;
 			if constexpr (std::is_move_constructible_v<Actor>) {
 				memory = memory_block<Size, ::kelbon::tuple>(std::move(copy));
