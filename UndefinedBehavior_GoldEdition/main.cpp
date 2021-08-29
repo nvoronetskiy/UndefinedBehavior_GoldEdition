@@ -3,6 +3,11 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include <sstream>
+#include <list>
+#include <unordered_map>
+#include <ranges>
+#include <future>
 
 #include "test_kelbon_concepts.hpp"
 #include "test_kelbon_memory_block.hpp"
@@ -19,6 +24,7 @@
 #include "kelbon_template_base_class.hpp"
 
 #include "kelbon_action.hpp"
+#include "kelbon_coroutines.hpp"
 
 using namespace kelbon::test;
 
@@ -64,14 +70,94 @@ struct s {
 	}
 };
 
-int main() {
+
+
+using namespace kelbon::coroutine;
+
+generator<int> funcer(int v) {
+	for (;;) {
+		co_yield v++;
+		//if (v == 20) {
+		//	co_return 10;
+		//}
+	}
+
+}
+
+template<auto F>
+using tail_rec_return_t = kelbon::insert_type_list_t<std::tuple, kelbon::func::parameter_list<decltype(F)>>;
+
+template<auto F>
+struct repeater {
+	using parameter_list = kelbon::func::parameter_list<decltype(F)>;
+	using tuple_of_args_t = tail_rec_return_t<F>;
+
+	static constexpr auto value = [](tuple_of_args_t start_args_tpl) {
+
+		auto help_lambda = []<size_t ... Indexes>(tuple_of_args_t start_args_tpl1, kelbon::value_list<size_t, Indexes...>) {
+
+			tuple_of_args_t prev_state = F(std::get<Indexes>(start_args_tpl1)...);
+			auto current_state = prev_state;
+			do {
+				prev_state = current_state;
+				current_state = F(std::get<Indexes>(current_state)...);
+			} while (current_state != prev_state);
+
+			return current_state;
+		};
+		if constexpr (parameter_list::count_of_arguments == 1) {
+			return std::get<0>(help_lambda(start_args_tpl, kelbon::make_value_list<size_t, kelbon::func::parameter_list<decltype(F)>::count_of_arguments>{}));
+		}
+		else {
+			return help_lambda(start_args_tpl, kelbon::make_value_list<size_t, kelbon::func::parameter_list<decltype(F)>::count_of_arguments>{});
+		}
+	};
+};
+// принимаает исходное состояние аргумент листа, возвращает конечное состояние аргумент листа после окончания рекурсии(когда состояние перестаёт меняться)
+template<kelbon::callable auto F>
+auto tail_recursion = repeater<F>::value;
+
+unsigned REC(unsigned v) {
+	if (v == 5'000'000) {
+		return v;
+	}
+	return v + 1;
+}
+
+struct no_copy {
+	no_copy(int) {}
+	no_copy() = delete;
+	no_copy(const no_copy&) = delete;
+	no_copy(no_copy&&) = default;
+};
+
+int main(int argc) {
+	//constexpr ::kelbon::tuple<int, float, double> tpl1(5, 10.f, 100500.);
+	//constexpr ::kelbon::tuple<int> tpl2(6);
+	//auto tpl3(tpl2);
+	//auto tpl4 = tpl1;
+	//tpl3 = tpl4;
+
+	//constexpr bool SPACESHIPTEST = tpl1 == tpl2;
+	kelbon::tuple<no_copy, no_copy> tpltest = { 5, 5 };
+	auto vieb = std::move(tpltest);
+	auto effected = ::kelbon::func::add_effect < [](int v) {
+		return v * 2;
+	}, []() {std::cout << "hehhe"; } > ;
+	auto invres = effected(5);
+	// todo - оператор == != для тупла (возможно можно чет намутить с <=>, учитывая что у каждого value_in_tuple я уже написал оператор сравнения
+	std::tuple<int&&, const float&> stdtpl(5, 10.f);
+	auto&& m = std::get<0>(stdtpl);
+	auto coro = funcer(10);
+	auto coval = coro.Get();
+	for (int i = 0; i < 200; ++i) {
+		//std::cout << coro.Get() << '\n';
+	}
 	constexpr ::kelbon::tuple tpl(3, 4.f, 'c');
 	constexpr auto cxtv = tpl.get<2>();
 	auto mmmm = tpl.get<2>();
 	std::cout << mmmm << std::endl;
-	constexpr ::kelbon::value_in_tuple<int, 0> spaceship1(10);
-	constexpr ::kelbon::value_in_tuple<int, 10> spaceship2(20);
-	constexpr bool spbv = spaceship1 > spaceship2;
+	constexpr bool testingtpl = std::is_nothrow_move_constructible_v<kelbon::tuple<int, float, std::vector<double>>>;
 
 	constexpr bool sss = ::kelbon::is_explicit_constructible_v<s>;
 	constexpr bool waw = ::kelbon::is_explicit_constructible_v<Fctor>;
@@ -84,7 +170,7 @@ int main() {
 	constexpr bool v = noexcept(::kelbon::tuple_cat(tpl, ::kelbon::tuple(1, 2, 3)));
 	std::cout << "v=" << v << std::endl;
 	auto tcatres1 = kelbon::tuple_cat(tpl, t, kelbon::tuple('c', 10, 150.f, nullptr));
-	// todo -fixed string, которую можно передавать как шаблонный параметр + user defined literal, который её создает из const char*
+
 	// todo - Clang Format
 	constexpr bool isfctor = ::kelbon::functor<decltype([]() {})>;
 	::kelbon::action<int(s*, float)> act = &s::method;
@@ -101,7 +187,7 @@ int main() {
 	::kelbon::action<int(s*, float)> act1;
 	act1 = act.Clone();
 	rv1 = act1(&value2, -2);
-
+	
 	::kelbon::action FF1([&fv](int x) mutable -> int { fv += 1; return static_cast<int>(static_cast<float>(x * 2) + fv); });
 
 	// TODO - перевести всё на модули

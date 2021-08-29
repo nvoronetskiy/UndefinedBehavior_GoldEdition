@@ -68,19 +68,19 @@ namespace kelbon {
 	};
 
 	// METHODS (LVALUE ref-qual)
-	
+
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) &>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...)&>
 		: signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const &>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const&>
 		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile &>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile&>
 		: signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
@@ -90,22 +90,22 @@ namespace kelbon {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const & noexcept>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const& noexcept>
 		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const noexcept> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile & noexcept>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile& noexcept>
 		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile noexcept> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile &>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile&>
 		: signature<ResultType(OwnerType::*)(ArgumentTypes...) const volatile> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
-	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile & noexcept>
+	struct signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile& noexcept>
 		: signature<ResultType(OwnerType::*)(ArgumentTypes...) volatile noexcept> {
 		static constexpr ref_qual ref_qualification = ref_qual::lvalue;
 	};
@@ -114,7 +114,7 @@ namespace kelbon {
 
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
 	struct signature<ResultType(OwnerType::*)(ArgumentTypes...)&&>
-	: signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
+		: signature<ResultType(OwnerType::*)(ArgumentTypes...)> {
 		static constexpr ref_qual ref_qualification = ref_qual::rvalue;
 	};
 	template<typename OwnerType, typename ResultType, typename ... ArgumentTypes>
@@ -206,7 +206,7 @@ namespace kelbon {
 		static constexpr ref_qual ref_qualification = base_t::ref_qualification;
 		using func_type = typename func_type_helper<result_type, parameter_list>::type;
 	};
-	
+
 	// takes reference to callable/method/lambda/FUNCTOR and gives its info
 	template<typename ResultType, typename ... ArgumentTypes>
 	struct signature<ResultType(&)(ArgumentTypes...)> : signature<ResultType(*)(ArgumentTypes...)> {};
@@ -216,23 +216,17 @@ namespace kelbon {
 
 	// по сути ещё элипсы сишные ... , но пошли они нахуй
 
-	[[nodiscard]] consteval auto get_function_signature(auto x) noexcept {
-		return signature<decltype(x)>{};
-	}
-
 	namespace func {
 		template<typename F>
 		using result_type = typename signature<F>::result_type;
 
 		template<typename F>
 		using parameter_list = typename signature<F>::parameter_list;
-	} // namespace func
 
-	// Need real value, so declval is not working here(not a problem for functors, use {} for initialization
-	// or signature template or get_function_signature callable...)
-	// lambdas with capture have no default constructor, so you cant use it for them, but can use signature<T>
-	template<auto Function>
-	using function_info = decltype(get_function_signature(Function));
+		template<typename F>
+		constexpr inline size_t count_of_arguments = parameter_list<F>::count_of_arguments;
+
+	} // namespace func
 
 } // namespace kelbon
 

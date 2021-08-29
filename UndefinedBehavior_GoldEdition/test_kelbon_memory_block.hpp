@@ -2,12 +2,14 @@
 #ifndef TEST_KELBON_MEMORY_BLOCK_HPP
 #define TEST_KELBON_MEMORY_BLOCK_HPP
 
+#include <string>
+#include <sstream>
+#include <array>
+#include <vector>
+
 #include "kelbon_memory_block.hpp"
 #include "test_kelbon_base.hpp"
 #include "kelbon_tuple.hpp"
-
-#include <string>
-#include <vector>
 
 namespace kelbon::test {
 	
@@ -96,11 +98,41 @@ namespace kelbon::test {
 		}
 	}
 
+	inline void MemoryBlockSerializationTest() {
+		std::stringstream sstrm;
+
+		std::array<float, 280> arr = { 3.f };
+
+		std::vector<std::array<float, 280>> mega(15, arr);
+		for (auto& bigvalue : mega) {
+			for (auto& value : arr) {
+				value = static_cast<float>(rand() % 2000);
+			}
+		}
+
+		kelbon::memory_block block = { arr, mega, 5, std::string("Hello world"), 'c' };
+
+		block.WriteAs<std::array<float, 280>, std::vector<std::array<float, 280>>, int, std::string, char>(sstrm);
+
+		kelbon::memory_block<1208> read_block; // may be make_block function or something for size calculating
+
+		read_block.ReadAs<std::array<float, 280>, std::vector<std::array<float, 280>>, int, std::string, char>(sstrm);
+
+		auto& [x1, x2, x3, x4, x5] = read_block.GetDataAs<std::array<float, 280>, std::vector<std::array<float, 280>>, int, std::string, char>();
+		auto& [x11, x22, x33, x44, x55] = block.GetDataAs<std::array<float, 280>, std::vector<std::array<float, 280>>, int, std::string, char>();
+
+		bool test_value = (x1 == x11) && (x2 == x22) && (x3 == x33) && (x4 == x44) && (x5 == x55);
+		if (!test_value) {
+			throw test_failed("Memory block serialization reading or writing works bad\n");
+		}
+	}
+
 	inline void TestsForMemoryBlock() {
 		test_room tester;
 		tester.AddTest(MemoryBlockTest);
 		tester.AddTest(MemoryBlockDestroyTest);
 		tester.AddTest(MemoryBlockCloneTest);
+		tester.AddTest(MemoryBlockSerializationTest);
 		tester.StartTesting();
 	}
 

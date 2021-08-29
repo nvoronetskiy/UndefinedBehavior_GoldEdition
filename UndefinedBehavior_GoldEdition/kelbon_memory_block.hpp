@@ -3,6 +3,8 @@
 #define KELBON_MEMORY_BLOCK_HPP
 
 #include <exception>
+#include <ranges>
+#include <iostream>
 
 #include "kelbon_tuple.hpp"
 
@@ -68,15 +70,81 @@ namespace kelbon {
 		}
 	};
 
-	// Передавая данные на хранение в memory_block<max_size>(далее - memory_block) Вы: 
-	// 1. Понимаете, что переданное значение больше нельзя использовать, оно побайтово обнуляется
-	// 2. Подтверждаете, что в деструкторах типов передаваемых значений нет переходов по ссылкам/разыменования указателей являющихся полями класса, нет арифметики удаляемых указателей
-	// 3. Соглашаетесь, что больше ими не владеете и передаёте право на владение и обязательство на удаление на принимающую сторону(memory_block)
+	template<typename T>
+	concept serializable_helper = std::is_fundamental_v<T> && !std::is_void_v<T>;
+
+	template<typename T>
+	concept serializable_range = std::ranges::range<T> &&
+		(serializable_helper<typename T::value_type> || serializable_range<typename T::value_type>);
+
+	template<typename T>
+	concept serializable = serializable_helper<T> || serializable_range<T>;
+
+	template<typename Traits, typename T>
+	requires (serializable<T>&& serializable_helper<T>)
+	std::basic_ostream<char, Traits>& WriteToStream(std::basic_ostream<char, Traits>& ostream, const T& value) {
+		if constexpr (std::same_as<T, char>) {
+			ostream << static_cast<int>(value) << '\n';
+		}
+		else {
+			ostream << value << '\n';
+		}
+		return ostream;
+	}
+	
+	template<typename Traits, typename T>
+	requires serializable_range<T>
+	std::basic_ostream<char, Traits>& WriteToStream(std::basic_ostream<char, Traits>& ostream, const T& range) {
+		ostream << range.size() << '\n';
+		for(const auto& value : range) {
+			WriteToStream(ostream, value);
+		}
+		return ostream;
+	}
+
+	template<typename T, typename Traits>
+	T ReadFromStream(std::basic_istream<char, Traits>& istream) {
+		if constexpr (std::same_as<T, char>) {
+			// for example if ' ' inserted into stream like ' ', then its ignored by reader, its error
+			int value;
+			istream >> value;
+			return static_cast<char>(value);
+		}
+		else {
+			T value;
+			istream >> value;
+			return value;
+		}
+	}
+
+	template<typename T>
+	concept have_resize = requires(T value) {
+		value.resize(10);
+	};
+
+	template<typename T, typename Traits>
+	requires (serializable_range<T>)
+	T ReadFromStream(std::basic_istream<char, Traits>& istream) {
+		T range;
+		size_t range_size = 0;
+		istream >> range_size;
+
+		if constexpr (have_resize<T>) {
+			range.resize(range_size);
+		}
+
+		for (auto& value : range) {
+			value = ReadFromStream<typename T::value_type>(istream);
+		}
+
+		return range;
+	}
+
 	template<size_t max_size, template<typename...> typename TupleType = ::kelbon::tuple>
 	class memory_block {
 	private:
-		char  data[max_size]; // память под хранение любых входных данных
-		void* memory;     // всё что лежит в классе-запоминателе деструктора - указатель на таблицу виртуальных функций
+		char  data[max_size];
+		void* memory; // vtable ptr
 
 		constexpr void Clear() noexcept {
 			if (memory == nullptr) [[unlikely]] {
@@ -89,6 +157,7 @@ namespace kelbon {
 		constexpr const base_remember_type_info* const GetRTTI() const noexcept {
 			return reinterpret_cast<const base_remember_type_info* const>(&memory);
 		}
+
 	public:
 		constexpr memory_block() noexcept : data{ 0 }, memory(nullptr) {}
 
@@ -104,7 +173,7 @@ namespace kelbon {
 			if constexpr (std::is_move_constructible_v<Tuple>) {
 				GetRTTI()->Move(&value, data);
 			}
-			else { // here Tuple is copible, because of static_assert here
+			else { // here Tuple is copyable, because of static_assert here
 				if constexpr (std::is_nothrow_copy_constructible_v<Tuple>) {
 					GetRTTI()->Copy(&value, data);
 				}
@@ -113,7 +182,7 @@ namespace kelbon {
 						GetRTTI()->Copy(&value, data);
 					}
 					catch (...) {
-						// nothing to do, just because i want noexcept constructor
+						// nothing to do, just because i want noexcept ctor
 					}
 				}
 			}
@@ -216,7 +285,6 @@ namespace kelbon {
 		// same as GetDataAs, but with checking if right types you trying to get, if not - exception thrown
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
 		[[nodiscard]] constexpr const TupleType<Types...>& SafeGetDataAs() const {
-
 			auto check_value = remember_type_info<TupleType<Types...>>{};
 
 			if ((*(reinterpret_cast<void**>(&check_value))) != memory) {
@@ -229,13 +297,39 @@ namespace kelbon {
 		constexpr ~memory_block() {
 			Clear();
 		}
+
+		// serialization/deserialization
+		template<typename ... Types, typename Traits>
+		requires(serializable<Types> && ...)
+		std::basic_ostream<char, Traits>& WriteAs(std::basic_ostream<char, Traits>& ostream) const noexcept {
+			return WriteAs_helper<Types...>(ostream, make_value_list<size_t, sizeof...(Types)>{});
+		}
+		template<typename ... Types, typename Traits>
+		requires(serializable<Types> && ...)
+		std::basic_istream<char, Traits>& ReadAs(std::basic_istream<char, Traits>& istream) noexcept {
+			TupleType<Types...> tpl;
+			ReadAs_helper<Types...>(istream, tpl, make_value_list<size_t, sizeof...(Types)>{});
+			*this = memory_block(std::move(tpl));
+			return istream;
+		}
+	private:
+		template<typename ... Types, typename Traits, size_t ... Indexes>
+		std::basic_ostream<char, Traits>& WriteAs_helper(std::basic_ostream<char, Traits>& ostream, value_list<size_t, Indexes...>) const noexcept {
+			const auto& tuple_to_write = GetDataAs<Types...>();
+			((WriteToStream(ostream, std::get<Indexes>(tuple_to_write))), ...);
+			return ostream;
+		}
+		template<typename ... Types, typename Traits, size_t  ... Indexes>
+		void ReadAs_helper(std::basic_istream<char, Traits>& istream, TupleType<Types...>& tpl, value_list<size_t, Indexes...>) noexcept {
+			((tpl.template get<Indexes>() = ReadFromStream<Types>(istream)), ...);
+		}
 	};
+
+	memory_block()->memory_block<55>;
 
 	template<template<typename...> typename TupleType, typename ... Types>
 	memory_block(TupleType<Types...>&&)->memory_block<sizeof_pack<TupleType<Types...>>(), TupleType>;
 
-	// BUG IN COMPILER(parser) - bad working with pack expansion/sizeof/tetrary operator
-	// in deduction guides/noexcept expressions/template arguments in specializations/when inheriting
 	template<typename ... Types>
 	memory_block(Types&& ...)->memory_block<sizeof_pack<::kelbon::tuple<std::remove_reference_t<Types>...>>(), ::kelbon::tuple>;
 

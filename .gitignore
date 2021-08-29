@@ -360,5 +360,9 @@ MigrationBackup/
 .ionide/
 
 # Fody - auto-generated XML schema
+
+*.vcxproj
+*.filters
+
 FodyWeavers.xsd
 /UndefinedBehavior_GoldEdition/analize_rule_set.ruleset

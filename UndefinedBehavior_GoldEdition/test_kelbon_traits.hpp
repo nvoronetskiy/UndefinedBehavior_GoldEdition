@@ -50,11 +50,12 @@ namespace kelbon::test {
 	}
 
 	inline void SignatureTest() {
+		using test_func = decltype(DecayTest);
 		constexpr bool test_value =
-			!function_info<DecayTest>::is_noexcept &&
-			same_as<function_info<DecayTest>::parameter_list, type_list<>> &&
-			same_as<void, function_info<DecayTest>::result_type> &&
-			same_as<typename function_info<[](float, int) { return true; }>::parameter_list, type_list<float, int>> &&
+			!signature<test_func>::is_noexcept &&
+			same_as<::kelbon::func::parameter_list<test_func>, type_list<>> &&
+			same_as<void, ::kelbon::func::result_type<test_func>> &&
+			same_as<::kelbon::func::parameter_list<decltype([](float, int) { return true; })>, type_list<float, int>> &&
 			// lambdas with capture have no default constructor, so it cant be sended into function_info like template parameter
 			same_as<typename signature<decltype([test_value](float) {return test_value; })>::parameter_list, type_list<float>>;
 

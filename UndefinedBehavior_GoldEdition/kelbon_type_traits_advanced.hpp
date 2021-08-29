@@ -153,6 +153,27 @@ namespace kelbon {
 	template<typename T>
 	struct is_explicit_move_constructible : std::bool_constant<is_explicit_move_constructible_v<T>> {};
 
+	// TRAIT generate_unique_type
+	template<auto V = []() {}>
+	using generate_unique_type = decltype(V);
+
+	// TRAIT add_effect ( do not works for lambdas with capture because they are not convertible to function pointer)
+	// todo (may be) Effect accepting Args.. and returning tuple<Args...> so its can modify accepted paramters(some filter...)
+	template<auto V, auto Effect, typename RetType, typename ... Args>
+	constexpr auto wrap_help(RetType(*F)(Args...)) {
+		return
+			[](Args... args) -> RetType {
+			Effect();
+			return V(args...);
+		};
+	}
+
+	namespace func {
+		template<auto F, auto Effect>
+		requires (count_of_arguments<decltype(Effect)> == 0)
+		constexpr decltype(+F) add_effect = +wrap_help<F, Effect>(+F);
+	}
+
 } // namespace kelbon
 
 #endif // !KELBON_TYPE_TRAITS_ADVANCED_HPP

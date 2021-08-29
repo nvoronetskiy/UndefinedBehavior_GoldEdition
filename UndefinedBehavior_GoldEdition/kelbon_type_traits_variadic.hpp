@@ -62,7 +62,6 @@ namespace kelbon {
 	template<typename ... Types>
 	using merge_type_lists_t = typename merge_type_lists<Types...>::type;
 
-
 	// TRAIT insert_type_list
 	template<template<typename...> typename Template, typename TypeList>
 	struct insert_type_list;
