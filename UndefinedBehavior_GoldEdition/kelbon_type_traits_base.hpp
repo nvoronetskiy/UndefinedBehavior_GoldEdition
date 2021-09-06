@@ -62,6 +62,7 @@ namespace kelbon {
 	template<typename T>
 	using decay_t = typename decay<T>::type;
 
+	struct nullstruct {};
 }//namespace kelbon
 
 #endif // !KELBON_TYPE_TRAITS_BASE_HPP

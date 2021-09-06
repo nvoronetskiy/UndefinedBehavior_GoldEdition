@@ -4,6 +4,7 @@
 #define KELBON_CONCEPTS_FUNCTIONAL_HPP
 
 #include <concepts>
+
 #include "kelbon_type_traits_functional.hpp"
 
 namespace kelbon {

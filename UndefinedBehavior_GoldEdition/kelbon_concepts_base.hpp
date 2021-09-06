@@ -23,6 +23,13 @@ namespace kelbon {
 		static_cast<T>(4); // можно создавать от int
 	};
 
+	template<typename T>
+	concept contextually_convertible_to_bool = requires (T value) {
+		value ? 1 : 2;
+	};
+
+	template<typename T, typename ... Args>
+	concept one_of = sizeof...(Args) > 0 && ((std::same_as<T, Args>) || ...);
 } // namespace kelbon
 
 #endif // !KELBON_CONCEPTS_BASE_HPP

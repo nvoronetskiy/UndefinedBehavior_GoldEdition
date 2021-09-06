@@ -2,12 +2,19 @@
 #ifndef KELBON_UTILITY_HPP
 #define KELBON_UTILITY_HPP
 
+#include <type_traits>
+
 namespace kelbon {
 
 	// TEMPLATE FUNCTION sizeof_pack
 	template<typename ... Types>
 	[[nodiscard]] consteval size_t sizeof_pack() noexcept {
 		return (sizeof(Types) + ...);
+	}
+	template<typename T>
+	requires (std::is_enum_v<T>)
+	constexpr auto to_underlying(T value) noexcept {
+		return static_cast<std::underlying_type_t<T>>(value);
 	}
 
 	// applies first thing to all pack, very usefull thing in noexcept/just variadic checks... (Compilers works bad with fold expressions)
@@ -19,7 +26,7 @@ namespace kelbon {
 
 	// TEMPLATE FUNCTION always_false FOR STATIC ASSERTS (for example)
 	[[nodiscard]] consteval inline bool always_false(auto) noexcept { return false; }
-	template<typename T>
+	template<typename...>
 	[[nodiscard]] consteval inline bool always_false() noexcept { return false; }
 
 } // namespace kelbon
