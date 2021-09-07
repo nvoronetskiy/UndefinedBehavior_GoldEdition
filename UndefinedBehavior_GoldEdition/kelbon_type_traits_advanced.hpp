@@ -157,6 +157,21 @@ namespace kelbon {
 	template<auto V = []() {}>
 	using generate_unique_type = decltype(V);
 
+	// TRAIT is_instance_of
+	template<template<typename...> typename Template, typename TypeToCheck>
+    struct is_instance_of {
+    private:
+        template<typename>
+        struct check : std::false_type {};
+        template<typename ... Args>
+        struct check<Template<Args...>> : std::true_type {};
+    public:
+        static constexpr inline bool value = check<TypeToCheck>::value;
+    };
+
+	template<template<typename...> typename Template, typename TypeToCheck>
+	constexpr inline bool is_instance_of_v = is_instance_of<Template, TypeToCheck>::value;
+
 	// TRAIT add_effect ( do not works for lambdas with capture because they are not convertible to function pointer)
 	// todo (may be) Effect accepting Args.. and returning tuple<Args...> so its can modify accepted paramters(some filter...)
 	template<auto V, auto Effect, typename RetType, typename ... Args>

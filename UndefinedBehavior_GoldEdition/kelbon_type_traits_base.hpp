@@ -62,6 +62,7 @@ namespace kelbon {
 	template<typename T>
 	using decay_t = typename decay<T>::type;
 
+	// just nullstruct like a nullptr
 	struct nullstruct {};
 }//namespace kelbon
 
