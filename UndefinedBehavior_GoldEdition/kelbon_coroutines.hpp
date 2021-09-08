@@ -43,14 +43,32 @@ namespace kelbon::coro {
             if (!is_setted) {
                 throw bad_memory_block_access("Value for callback result is not setted, kelbon::coro::bytes_for");
             }
-            return std::move(*(reinterpret_cast<T*>(data)));
+            return std::move(*reinterpret_cast<T*>(data));
         }
         // метод для корутины и пользователя
         constexpr void return_to_callback(T v) noexcept(std::is_nothrow_move_constructible_v<T>) {
             new(data) T(std::move(v));
             is_setted = true;
         }
+        ~bytes_for() {
+            if (is_setted) {
+                reinterpret_cast<T*>(data)->~T();
+            }
+        }
+    private:
+        // methods for working with no default constructible ContextTypes in promise... TODO check if this UB or not
+        template<bool, bool, bool, typename, typename, typename>
+        friend struct base_promise_type;
+
+        constexpr operator T& () noexcept {
+            return std::get<0>(data.GetDataAs<T>());
+        }
     };
+
+    template<>
+    struct just_type<void> : nullstruct {};
+    template<>
+    struct bytes_for<void> : nullstruct {};
 
     template<typename T>
     using storage_type = std::conditional_t<std::is_default_constructible_v<T>, just_type<T>, bytes_for<T>>;
@@ -74,19 +92,19 @@ namespace kelbon::coro {
         constexpr void return_void() const noexcept
         {}
     };
-    
-    // concept-helper
-    template<typename T>
-    concept some_default_constructible_std_tuple = is_instance_of_v<std::tuple, T> && std::is_default_constructible_v<T>;
-
 
     // TEMPLATE STRUCT base_promise_type
+    struct prohibit_co_await {
+        template<typename T>
+        void await_transform(T) = delete;
+    };
+
     template<
         bool IsImmediateStart,
         bool IsResumable = true,
         bool StopBeforeEnd = true,
         typename ResultType = void,
-        some_default_constructible_std_tuple ContextType = std::tuple<>,
+        typename ContextType = nullstruct,
         typename AwaitTransformer = nullstruct
     >
     struct base_promise_type
@@ -94,20 +112,9 @@ namespace kelbon::coro {
     private:
         using ret_block = return_block<ResultType>;
         using transform_block = AwaitTransformer;
+        using context_storage_t = std::conditional_t<std::is_default_constructible_v<ContextType>, ContextType, bytes_for<ContextType>>;
 
-        template<typename T>
-        struct no_copyble_storage {
-        private:
-            T value;
-        public:
-            no_copyble_storage() = default;
-            no_copyble_storage(const no_copyble_storage&) = delete;
-            void operator=(const no_copyble_storage&) = delete;
-            constexpr T& Get() noexcept {
-                return value;
-            }
-        };
-        [[no_unique_address]] no_copyble_storage<ContextType> my_context; // TODO - проверить ломает ли этот аттрибут что то, если не 0 размер
+        [[no_unique_address]] context_storage_t my_context; // TODO - проверить ломает ли этот аттрибут что то, если не 0 размер
     public:
         using co_handle = std::coroutine_handle<base_promise_type>;
         static constexpr bool is_resumable = IsResumable;
@@ -131,15 +138,18 @@ namespace kelbon::coro {
                 return std::suspend_never{};
             }
         }
-        [[nodiscard]] constexpr auto& Context() noexcept requires(!std::same_as<std::tuple<>, ContextType>) {
-            return my_context.Get();
+        [[nodiscard]] constexpr ContextType& Context() noexcept {
+            return my_context;
         }
         [[noreturn]] void unhandled_exception() {
             throw;
         }
     };
 
-    template<typename PromiseType, bool GetContext = false>
+    // TEMPLATE CLASS FOR SPECIAL CONSTANTS this_coro_t
+    enum class i_want : unsigned { context, promise_ptr };
+
+    template<typename PromiseType, i_want What>
     struct this_coro_t {
         consteval this_coro_t() noexcept = default;
 
@@ -162,20 +172,24 @@ namespace kelbon::coro {
                     saved_handle = handle;
                     return false;
                 }
-                constexpr auto& await_resume() const noexcept { // requires(GetContext) {
-                    return saved_handle.promise().Context();   // reference to context
+                constexpr decltype(auto) await_resume() const noexcept {
+                    if constexpr (What == i_want::context) {
+                        return saved_handle.promise().Context();    // reference to context
+                    }
+                    else if constexpr (What == i_want::promise_ptr) {
+                        return &saved_handle.promise();             // pointer to promise
+                    }
                 }
-                //constexpr auto await_resume() noexcept requires(!GetContext) {
-                //    return &saved_handle.promise();             // pointer to promise
-                //}
             };
             return awaiter_t();
         }
     };
 
+    // TEMPLATE ALIAS FOR BETTER self_context AND OTHER SPECIAL CONSTANTS USAGE
     template<callable auto F>
-    using coro_type = func::result_type<decltype(F)>;
+    using coroutine_from = func::result_type<decltype(F)>;
 
+    // TEMPLATE coroutine
     template<typename PromiseType>
     struct coroutine {
         using promise_type = PromiseType;
@@ -214,7 +228,7 @@ namespace kelbon::coro {
             return my_handle.promise().Context();
         }
 
-        static constexpr this_coro_t<promise_type> self_context = {};
+        static constexpr this_coro_t<promise_type, i_want::context> self_context = {};
 
         ~coroutine() {
             if (my_handle) {
@@ -223,11 +237,12 @@ namespace kelbon::coro {
         }
     };
 
-    template<typename ResultType>
+    // TEMPLATE COROUTINE TYPE generator
+    template<typename ResultType, typename ContextType = nullstruct, typename AwaitTransformer = nullstruct>
     struct generator
-        : coroutine<base_promise_type<false, true, true, ResultType>> {
+        : coroutine<base_promise_type<false, true, true, ResultType, ContextType, AwaitTransformer>> {
     private:
-        using base_t = coroutine<base_promise_type<false, true, true, ResultType>>;
+        using base_t = coroutine<base_promise_type<false, true, true, ResultType, ContextType, AwaitTransformer>>;
         using co_handle = typename base_t::co_handle;
 
         static_assert(!std::is_same_v<ResultType, void>);
@@ -304,42 +319,10 @@ namespace kelbon::coro {
         }
     };
 
-    template<typename ... Types>
-    struct find_signature {
-    private:
-        template<size_t Number, typename First, typename ... Others>
-        static consteval auto Finder(type_list<First, Others...>, std::integral_constant<size_t, Number>) noexcept {
-            if constexpr (is_instance_of_v<signature, First>) {
-                struct result
-                    : std::integral_constant<size_t, Number> {
-                    using type = First;
-                };
-                return result{};
-            }
-            else {
-                return Finder(type_list<Others...>{}, std::integral_constant<size_t, Number + 1>{});
-            }
-        }
-        template<size_t N>
-        static consteval auto Finder(type_list<>, std::integral_constant<size_t, N>) {
-            static_assert(always_false<std::integral_constant<size_t, N>>(),
-                "TODO Call usage example here You must give me signature of callback, for example kelbon::signature<int(const boost::error_code&, size_t)>");
-        }
-        using result_t = decltype(Finder(type_list<Types...>{}, std::integral_constant<size_t, 0>{}));
-    public:
-        using type = typename result_t::type;            // сама сигнатура 
-        static constexpr size_t value = result_t::value; // номер сигнатуры в списке типов
-    };
-
-    // TODO - sizeof для всех возможных вариантов объединитьв один/ два
-    template<typename ... Types>
-    [[nodiscard]] consteval size_t sizeof_type_list(type_list<Types...>) {
-        return sizeof_pack<Types...>();
-    }
-
-    // COROUTINE TYPE grasshopper
+    // TEMPLATE COROUTINE TYPE grasshopper
     template<typename ... ContextTypes>
-    using grasshopper_promise_type = base_promise_type<false, false, true, void, std::tuple<ContextTypes...>>;
+    using grasshopper_promise_type = base_promise_type<false, false, true, void,
+        std::conditional_t<sizeof...(ContextTypes) == 1, typename type_list<ContextTypes...>::template get_element<0>, std::tuple<ContextTypes...>>>;
 
     template<typename ... ContextTypes>
     struct grasshopper : coroutine<grasshopper_promise_type<ContextTypes...>> {
@@ -356,9 +339,11 @@ namespace kelbon::coro {
         //}
     };
 
-    template<typename T>
+    // HELPER for jump_on
+    template<typename T> // TODO
     concept executor = true;// requires(T) { &T::execute; };
 
+    // TEMPLATE FOR SPECIAL co_awaitable TYPES
     template<typename ExecutorType>
     requires executor<ExecutorType>
     struct jump_on {
@@ -390,10 +375,46 @@ namespace kelbon::coro {
         }
     };
 
+    // HELPER for call template
+    template<typename ... Types>
+    struct find_signature {
+    private:
+        template<size_t Number, typename First, typename ... Others>
+        static consteval auto Finder(type_list<First, Others...>, std::integral_constant<size_t, Number>) noexcept {
+            if constexpr (is_instance_of_v<signature, First>) {
+                struct result
+                    : std::integral_constant<size_t, Number> {
+                    using type = First;
+                };
+                return result{};
+            }
+            else {
+                return Finder(type_list<Others...>{}, std::integral_constant<size_t, Number + 1>{});
+            }
+        }
+        template<size_t N>
+        static consteval auto Finder(type_list<>, std::integral_constant<size_t, N>) {
+            static_assert(always_false<std::integral_constant<size_t, N>>(),
+                "TODO Call usage example here You must give me signature of callback, for example kelbon::signature<int(const boost::error_code&, size_t)>");
+        }
+        using result_t = decltype(Finder(type_list<Types...>{}, std::integral_constant<size_t, 0>{}));
+    public:
+        using type = typename result_t::type;            // сама сигнатура 
+        static constexpr size_t value = result_t::value; // номер сигнатуры в списке типов
+    };
+
+// wraps any function/method/etc for better using CALL template, works also for overloaded functions etc
+#define WRAP(function_name) \
+    [&](auto&& ... KELBON__args) \
+    { \
+        function_name(std::forward<decltype(KELBON__args)>(KELBON__args)...); \
+    }
+
+    // TEMPLATE FOR SPECIAL co_awaitable TYPES call
     template<typename F, typename ... Args>
     struct call {
     private:
-        using cb_signature = typename find_signature<Args...>::type;
+        using cb_signature = decay_t<typename find_signature<Args...>::type>;
         static constexpr size_t signature_nb = find_signature<Args...>::value;
         using cb_args_tuple = insert_type_list_t<std::tuple, typename cb_signature::parameter_list>;
         using cb_result_type = typename cb_signature::result_type;
@@ -405,13 +426,14 @@ namespace kelbon::coro {
 
         F f;
         std::tuple<Args...> input_args;
+        // вместо добавления сюда type erase я сам удалю то что сюда добавил в деструкторе
         std::byte output_args[sizeof(result_args_tuple)]; // если результат void, то size_of == 0 // TODO если у калбека 0 аргументов, то мне нужно очевидно не запоминать этот тупл
 
         // входные аргументы не всегда дефолтно конструируемы, например ссылки. получить их мне нужно потом, а создать место под них уже сейчас
 
         struct [[nodiscard]] awaiter_t {
             call& my_call;
-
+            // TODO - перенести всё в awaiter(output input args и т.д.), вместо класса call будет функция такая
             constexpr bool await_ready() noexcept {
                 return false;
             }
@@ -451,7 +473,7 @@ namespace kelbon::coro {
             }
         };
     public:
-        // TODO!!!!!!! блять, можно же сделать красивее в разы... Args1... signature<Ret(Args2...), Args3...
+        // TODO!!!!!!! блять, можно же сделать красивее в разы... Args1... signature<Ret(Args2...), Args3... и всё это функцией возвращающей awaiter, а не классом
         constexpr call(F&& f, Args&& ... args) 
             : f(std::forward<F>(f)), input_args(std::forward<Args>(args)...), output_args{}
         {}
@@ -459,7 +481,17 @@ namespace kelbon::coro {
         auto operator co_await() && noexcept {
             return awaiter_t(*this);
         }
+        // TODO всё перенести в awaiter_t и функцию, тогда гораздо понятнее кто до чего доживает(awaiter точно доживёт до выхода из await_resume(), 
+        // а потом может спокойно вызывать свой деструктор)
+        ~call() {
+            // мы оказались здесь только если калбек был вызыван и корутина уже проснулась, а значит проверять заданы ли аргументы нет смысла
+            reinterpret_cast<result_args_tuple*>(output_args)->~result_args_tuple();
+        }
     };
+
+    // deduction guide удивительно, но без него автоматически сгенерированный работает хуже
+    template<typename ... Types>
+    call(Types&&...)->call<Types...>;
 
 } // namespace kelbon::coro
 

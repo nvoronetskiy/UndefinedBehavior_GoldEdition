@@ -94,7 +94,6 @@ namespace kelbon {
 		template<callable Actor>
 		requires(func::returns<Actor, ResultType>&& func::accepts<Actor, ArgTypes...>)
 		constexpr action& operator=(Actor&& something) noexcept {
-
 			memory = memory_block<Size, ::kelbon::tuple>(std::forward<Actor>(something));
 			RememberHowToCall<Actor>();
 			return *this;
@@ -102,13 +101,7 @@ namespace kelbon {
 		template<typename Actor>
 		requires (functor<Actor>&& std::is_copy_constructible_v<Actor> && func::returns<Actor, ResultType>&& func::accepts<Actor, ArgTypes...>)
 		constexpr action& operator=(const Actor& something) noexcept(std::is_nothrow_copy_constructible_v<Actor>) {
-			Actor copy = something;
-			if constexpr (std::is_move_constructible_v<Actor>) {
-				memory = memory_block<Size, ::kelbon::tuple>(std::move(copy));
-			}
-			else {
-				memory = memory_block<Size, ::kelbon::tuple>(copy);
-			}
+			memory = memory_block<Size, ::kelbon::tuple>(something);
 			RememberHowToCall<Actor>();
 			return *this;
 		}

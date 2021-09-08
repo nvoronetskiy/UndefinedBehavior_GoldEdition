@@ -32,6 +32,20 @@ namespace kelbon {
 	//CONCEPT one_of
 	template<typename T, typename ... Args>
 	concept one_of = sizeof...(Args) > 0 && ((std::same_as<T, Args>) || ...);
+
+	// CONCEPT co_awaitable
+
+	template<typename T>
+	concept has_member_operator_co_await = requires (T value) {
+		value.operator co_await();
+	};
+	template<typename T>
+	concept has_global_co_await = requires (T value) {
+		operator co_await(value);
+	};
+	template<typename T>
+	concept co_awaitable = has_member_operator_co_await<T> || has_global_co_await<T>;
+
 } // namespace kelbon
 
 #endif // !KELBON_CONCEPTS_BASE_HPP

@@ -166,7 +166,7 @@ namespace kelbon {
         template<typename ... Args>
         struct check<Template<Args...>> : std::true_type {};
     public:
-        static constexpr inline bool value = check<TypeToCheck>::value;
+        static constexpr inline bool value = check<decay_t<TypeToCheck>>::value;
     };
 
 	template<template<typename...> typename Template, typename TypeToCheck>

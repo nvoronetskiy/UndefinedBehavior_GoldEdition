@@ -143,7 +143,7 @@ namespace kelbon {
 	template<size_t max_size, template<typename...> typename TupleType = ::kelbon::tuple>
 	class memory_block {
 	private:
-		char  data[max_size];
+		std::byte data[max_size];
 		void* memory; // vtable ptr
 
 		constexpr void Clear() noexcept {
@@ -159,11 +159,11 @@ namespace kelbon {
 		}
 
 	public:
-		constexpr memory_block() noexcept : data{ 0 }, memory(nullptr) {}
+		constexpr memory_block() noexcept : data{ }, memory(nullptr) {}
 
 		// DO NOT THROW IF COPY CONSTUCTOR THROWING!!!
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
-		constexpr explicit memory_block(TupleType<Types...>&& value) noexcept : data{ 0 } {
+		constexpr explicit memory_block(TupleType<Types...>&& value) noexcept : data{ } {
 			using Tuple = TupleType<Types...>;
 			static_assert(std::is_copy_constructible_v<Tuple> || (std::is_move_constructible_v<Tuple> && std::is_nothrow_move_constructible_v<Tuple>),
 				"Object is non copyble and non-movable, its useless to store it here");
@@ -197,7 +197,7 @@ namespace kelbon {
 
 		// DO NOT THROW IF COPY CONSTUCTOR THROWING!!!
 		template<size_t other_max_size> requires(other_max_size <= max_size)
-		constexpr memory_block(memory_block<other_max_size, TupleType>&& other) noexcept : memory(other.memory), data{ 0 } {
+		constexpr memory_block(memory_block<other_max_size, TupleType>&& other) noexcept : memory(other.memory), data{ } {
 			// other is empty block
 			if (other.memory == nullptr) [[unlikely]] {
 				return;
@@ -253,7 +253,9 @@ namespace kelbon {
 			GetRTTI()->Copy(data, clone.data);
 			return clone;
 		}
-		
+		[[nodiscard]] constexpr bool Empty() const noexcept {
+			return memory == nullptr;
+		}
 		[[nodiscard]] constexpr inline bool IsTriviallyDestructibleNow() const noexcept {
 			if (memory == nullptr) [[unlikely]] {
 				return true;
@@ -280,7 +282,7 @@ namespace kelbon {
 		}
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
 		[[nodiscard]] constexpr TupleType<Types...>& GetDataAs() noexcept {
-			return *(reinterpret_cast<TupleType<Types...>*>(const_cast<char*>(data)));
+			return *(reinterpret_cast<TupleType<Types...>*>(const_cast<std::byte*>(data)));
 		}
 		// same as GetDataAs, but with checking if right types you trying to get, if not - exception thrown
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
