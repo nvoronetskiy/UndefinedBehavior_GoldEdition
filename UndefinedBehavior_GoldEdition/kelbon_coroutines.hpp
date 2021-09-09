@@ -6,6 +6,7 @@
 #include <coroutine>
 #include <iterator>
 #include <tuple>
+#include <exception>
 
 #include "kelbon_concepts_base.hpp"
 #include "kelbon_concepts_functional.hpp"
@@ -16,16 +17,25 @@ namespace kelbon::coro {
 
     template<typename T>
     struct just_type {
+    private:
+        template<typename,typename...>
+        friend struct call;
+
         T value;
         bool is_setted = false;
 
         // метод для awaiter_t и реализации
         constexpr T get() {
             if (!is_setted) {
-                throw bad_memory_block_access("Value for callback result is not setted, kelbon::coro::just_type");
+                throw std::exception("Value for callback result is not setted, kelbon::coro::just_type");
             }
             return std::move(value);
         }
+        constexpr void set(T v) noexcept(std::is_nothrow_move_assignable_v<T>) {
+            value = std::move(v);
+            is_setted = true;
+        }
+    public:
         // метод для корутины и пользователя
         constexpr void return_to_callback(T v) noexcept(std::is_nothrow_move_assignable_v<T>) {
             value = std::move(v);
@@ -35,16 +45,25 @@ namespace kelbon::coro {
 
     template<typename T>
     struct bytes_for {
+    private:
         std::byte data[sizeof(T)];
         bool is_setted = false;
+
+        template<typename,typename...>
+        friend struct call;
 
         // метод для awaiter_t и реализации
         constexpr T get() {
             if (!is_setted) {
-                throw bad_memory_block_access("Value for callback result is not setted, kelbon::coro::bytes_for");
+                throw std::exception("Value for callback result is not setted, kelbon::coro::bytes_for");
             }
             return std::move(*reinterpret_cast<T*>(data));
         }
+        constexpr void set(T v) noexcept(std::is_nothrow_move_constructible_v<T>) {
+            new(data) T(std::move(v));
+            is_setted = true;
+        }
+    public:
         // метод для корутины и пользователя
         constexpr void return_to_callback(T v) noexcept(std::is_nothrow_move_constructible_v<T>) {
             new(data) T(std::move(v));
@@ -404,8 +423,9 @@ namespace kelbon::coro {
     };
 
 // wraps any function/method/etc for better using CALL template, works also for overloaded functions etc
-#define WRAP(function_name) \
-    [&](auto&& ... KELBON__args) \
+// you can capture what you want in "...", for example WRAP(socket.async_send, &socket, count)
+#define WRAP(function_name, ...) \
+    [__VA_ARGS__](auto&& ... KELBON__args) \
     { \
         function_name(std::forward<decltype(KELBON__args)>(KELBON__args)...); \
     }
@@ -414,8 +434,8 @@ namespace kelbon::coro {
     template<typename F, typename ... Args>
     struct call {
     private:
-        using cb_signature = decay_t<typename find_signature<Args...>::type>;
-        static constexpr size_t signature_nb = find_signature<Args...>::value;
+        using cb_signature = decay_t<typename find_signature<::std::remove_reference_t<Args>...>::type>;
+        static constexpr size_t signature_nb = find_signature<::std::remove_reference_t<Args>...>::value;
         using cb_args_tuple = insert_type_list_t<std::tuple, typename cb_signature::parameter_list>;
         using cb_result_type = typename cb_signature::result_type;
         using cb_result_storage = storage_type<cb_result_type>;
@@ -427,11 +447,11 @@ namespace kelbon::coro {
         F f;
         std::tuple<Args...> input_args;
         // вместо добавления сюда type erase я сам удалю то что сюда добавил в деструкторе
-        std::byte output_args[sizeof(result_args_tuple)]; // если результат void, то size_of == 0 // TODO если у калбека 0 аргументов, то мне нужно очевидно не запоминать этот тупл
+        storage_type<result_args_tuple> output_args; // если результат void, то size_of == 0 // TODO если у калбека 0 аргументов, то мне нужно очевидно не запоминать этот тупл
 
         // входные аргументы не всегда дефолтно конструируемы, например ссылки. получить их мне нужно потом, а создать место под них уже сейчас
 
-        struct [[nodiscard]] awaiter_t {
+        struct awaiter_t {
             call& my_call;
             // TODO - перенести всё в awaiter(output input args и т.д.), вместо класса call будет функция такая
             constexpr bool await_ready() noexcept {
@@ -439,7 +459,7 @@ namespace kelbon::coro {
             }
             template<typename P>
             constexpr void await_suspend(std::coroutine_handle<P> handle) {
-            // Тут вызывается лямбда раскрывающая 2 индекс массива, которые нужны чтобы достать из тупла аргументы ДО и ПОСЛЕ сигнатуры, а между ними вставить callback
+
                 [this, handle] <size_t ... Is1, size_t ... Is2, typename ... CallBackArgs>
                     (value_list<size_t, Is1...>, value_list<size_t, Is2...>, type_list<CallBackArgs...>) -> decltype(auto)
                 {
@@ -450,12 +470,12 @@ namespace kelbon::coro {
                         [this, handle](CallBackArgs ... cb_args)                                        // формируемый мной калбек, пробуждающий корутину на нужном потоке
                         {
                             if constexpr (std::is_void_v<cb_result_type>) {
-                                new(my_call.output_args) std::tuple<CallBackArgs...>(cb_args...);       // запоминаю входящие аргументы
+                                my_call.output_args.set(std::tuple<CallBackArgs...>(cb_args...));       // запоминаю входящие аргументы
                                 handle.resume();                                                        // пробуждаю корутину внутри калбека
                             }
                             else {
                                 cb_result_storage result;
-                                new(my_call.output_args) std::tuple<CallBackArgs..., cb_result_storage*>(cb_args..., &result);
+                                my_call.output_args.set(std::tuple<CallBackArgs..., cb_result_storage*>(cb_args..., &result));
                                 handle.resume();
                                 return result.get(); // когда корутина в следующий раз отдаст контроль тут продолжится выполнение и значение вернётся
                             }
@@ -469,29 +489,24 @@ namespace kelbon::coro {
                         );
             }
             constexpr result_args_tuple await_resume() {
-                return std::move(*reinterpret_cast<result_args_tuple*>(my_call.output_args));
+                return my_call.output_args.get();
             }
         };
     public:
-        // TODO!!!!!!! блять, можно же сделать красивее в разы... Args1... signature<Ret(Args2...), Args3... и всё это функцией возвращающей awaiter, а не классом
-        constexpr call(F&& f, Args&& ... args) 
-            : f(std::forward<F>(f)), input_args(std::forward<Args>(args)...), output_args{}
+        // конструктор шаблонный, чтобы принимать всё, иначе ожидается rvalue
+        template<typename F_, typename ... Args_>
+        constexpr call(F_&& f, Args_&& ... args)
+            : f(std::forward<F_>(f)), input_args(std::forward<Args_>(args)...), output_args{}
         {}
 
         auto operator co_await() && noexcept {
             return awaiter_t(*this);
         }
-        // TODO всё перенести в awaiter_t и функцию, тогда гораздо понятнее кто до чего доживает(awaiter точно доживёт до выхода из await_resume(), 
-        // а потом может спокойно вызывать свой деструктор)
-        ~call() {
-            // мы оказались здесь только если калбек был вызыван и корутина уже проснулась, а значит проверять заданы ли аргументы нет смысла
-            reinterpret_cast<result_args_tuple*>(output_args)->~result_args_tuple();
-        }
     };
 
     // deduction guide удивительно, но без него автоматически сгенерированный работает хуже
     template<typename ... Types>
-    call(Types&&...)->call<Types...>;
+    call(Types&&...)->call<Types&&...>;
 
 } // namespace kelbon::coro
 
