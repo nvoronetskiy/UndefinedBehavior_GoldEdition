@@ -13,23 +13,16 @@ namespace kelbon {
 
 	template<typename T, size_t index>
 	struct value_in_tuple {
-		constexpr auto operator <=>(const value_in_tuple& other) const noexcept = default;
+		constexpr auto operator <=>(const value_in_tuple&) const = default;
 		T value;
 	};
 
 	template<typename...>
 	struct tuple_base;
 
-	// enables conversation from tuple_base to another tuple base, for example tuple<int,float,double> into tuple<int> or tuple<int, float> (<=>, = etc operators)
-	// TODO - may be write another tuple with this possibility
-#ifndef ENABLE_SHRINCABLE_TUPLE
-	#define ACCESS private
-#else
-	#define ACCESS public
-#endif
 	template<size_t ... Indexes, typename ... Types>
 	struct tuple_base<value_list<size_t, Indexes...>, Types...>
-		: ACCESS value_in_tuple<Types, Indexes>... {
+		: value_in_tuple<Types, Indexes>... {
 	private:
 		using type_array = type_list<Types...>;
 
@@ -45,7 +38,7 @@ namespace kelbon {
 
 		template<typename ... Args>
 		requires(sizeof...(Args) == sizeof...(Types))
-		constexpr tuple_base(Args&& ... args)
+		constexpr explicit tuple_base(Args&& ... args)
 			noexcept(((std::is_nothrow_constructible_v<Types, Args>) && ...))
 			: value_in_tuple<Types, Indexes>(std::forward<Args>(args))...
 		{}
@@ -61,13 +54,13 @@ namespace kelbon {
 	};
 
 	template<typename ... Types>
-	struct tuple : tuple_base<make_value_list<size_t, sizeof...(Types)>, Types...> {
+	struct tuple
+		: tuple_base<make_value_list<size_t, sizeof...(Types)>, Types...> {
 	private:
 		using base_t = tuple_base<make_value_list<size_t, sizeof...(Types)>, Types...>;
 	public:
 		using base_t::base_t;
 	};
-
 	
 	// TEMPLATE FUNCTION tuple_cat
 	template<typename ... Tuples, size_t ... TupleIndexes, size_t ... IndexesInTuple>

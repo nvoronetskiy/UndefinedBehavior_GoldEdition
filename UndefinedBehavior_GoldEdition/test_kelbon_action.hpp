@@ -11,7 +11,6 @@
 #include "kelbon_action.hpp"
 
 namespace kelbon::test {
-
 	inline std::string testf(size_t size, char c) {
 		return std::string(size, c);
 	}
@@ -35,25 +34,64 @@ namespace kelbon::test {
 		testf2(testf2&&) = default;
 		testf2& operator=(testf2&&) = default;
 
-		std::string operator()(size_t size, char c) volatile & noexcept {
+		std::string operator()(size_t size, char c) volatile noexcept {
 			return std::string(size, c);
 		}
 	};
 	using test_lambda = decltype([](size_t size, char c) -> std::string {
 		return std::string(size, c);
 	});
-
+	struct test_ref_overload {
+		char operator()(const int& x, double& y) const& {
+			y = 200.;
+			return static_cast<char>(x);
+		}
+	};
+	inline void RefOverloadTest() {
+		test_ref_overload functor;
+		action act = functor;
+		int x = 5;
+		double y = 10;
+		char result = act(x, y);
+		if (result != static_cast<char>(x) || y != 200.) {
+			throw test_failed("kelbon::action for functors with & overloaded operator() dont work");
+		}
+	}
+	struct testfov {
+		int operator()(int) {
+			return 10;
+		}
+		int operator()(double ender) {
+			return 15;
+		}
+	};
+	inline void TemplateLambdasTest() {
+		auto tlambda = [](auto... args) {
+			return (args + ...);
+		};
+		action<int(int, int)> tact = tlambda;
+		if (tact(5, 10) != 15) {
+			throw test_failed("kelbon::action works bad with template-lambda");
+		}
+		action<int(double)> act2 = testfov{};
+		if (act2(10) != 15) {
+			throw test_failed("kelbon::action works bad for overloaded operator() in functors");
+		}
+	}
 	inline void FunctionsTest() {
 		testf2 functorv;
 		int v1 = 10;
 		float v2 = 15.f;
-		//::kelbon::tuple tt(testf2{});
+		::kelbon::tuple tt(testf2{});
 		::kelbon::tuple tt1(std::move(functorv));
 		action<std::string(size_t, char)> act1;
-		action act2(&testf); // Todo научиться принимать без &
+		action act2(testf);
 		action act3(&testf);
-		action act4(testf2{});
-		// забирается владение передаваемой сущностью, так что конструктора на не мув версию нет
+		action<std::string(size_t, char)> act_template = [](auto...) {return std::string("Hello world"); };
+		if (act_template(10, 'c') != "Hello world") {
+			throw test_failed("kelbon::action classes with template operator() dont work");
+		}
+		action<std::string(size_t, char)> act4(testf2{});
 		action act5(std::move(functorv));
 		action act6(test_lambda{});
 		action act7([v1, &v2](size_t size, char c) mutable noexcept ->std::string {
@@ -82,7 +120,7 @@ namespace kelbon::test {
 		fs[5] = act6.Clone();
 		fs[6] = act7.Clone();
 
-		fs[0] = act7.Clone(); // was empty;
+		fs[0] = act7.Clone(); // was empty
 		for (auto& func : fs) {
 			if (!func.Empty()) {
 				std::string check_result = func(5, 'c');
@@ -92,7 +130,7 @@ namespace kelbon::test {
 			}
 		}
 		if (v2 != 90.f) {
-			throw test_failed("kelobn::action lambdas with capture works bad");
+			throw test_failed("kelbon::action lambdas with capture works bad");
 		}
 	}
 
@@ -100,6 +138,8 @@ namespace kelbon::test {
 		test_room tester;
 
 		tester.AddTest(FunctionsTest);
+		tester.AddTest(RefOverloadTest);
+		tester.AddTest(TemplateLambdasTest);
 
 		tester.StartTesting();
 	}

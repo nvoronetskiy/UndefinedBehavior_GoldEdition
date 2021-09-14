@@ -11,13 +11,13 @@ namespace kelbon {
 		template<size_t, size_t, typename ...>
 		struct type_of_element_helper;
 
-		template<size_t index, size_t current_index>
-		struct type_of_element_helper<index, current_index> {
-			using type = false_type;
+		template<size_t index, typename T, typename ... Types>
+		struct type_of_element_helper<index, index, T, Types...> {
+			using type = T;
 		};
 		template<size_t index, size_t current_index, typename First, typename ... Types>
 		struct type_of_element_helper<index, current_index, First, Types...> {
-			using type = conditional_t<index == current_index, First, typename type_of_element_helper<index, current_index + 1, Types...>::type>;
+			using type = typename type_of_element_helper<index, current_index + 1, Types...>::type;
 		};
 	} // namespace detail
 

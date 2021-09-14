@@ -17,7 +17,9 @@ namespace kelbon::test {
 		int x = 10;
 		std::vector<char> vect(100, 'c');
 		std::string str("some string");
-
+		memory_block justin = 5;
+		justin = [](int x) { return x * 2; };
+		justin = x;
 		memory_block<200> block(x, vect, str, 266.f);
 
 		try {

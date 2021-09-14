@@ -18,7 +18,7 @@ namespace kelbon {
 	template<size_t, typename...>
 	struct remember_call;
 
-	template<callable Actor, typename ResultType, typename ... ArgTypes, size_t Size>
+	template<typename Actor, typename ResultType, typename ... ArgTypes, size_t Size>
 	struct remember_call<Size, Actor, ResultType, type_list<ArgTypes...>>
 		: base_remember_call<Size, ResultType, ArgTypes...> {
 		virtual ResultType CallByMemory(memory_block<Size>& block, ArgTypes ... args) const override {
@@ -27,7 +27,8 @@ namespace kelbon {
 		}
 	};
 
-	template<method Actor, typename ResultType, typename OwnerPtrType, typename ... ArgTypes, size_t Size>
+	template<typename Actor, typename ResultType, typename OwnerPtrType, typename ... ArgTypes, size_t Size>
+	requires(::std::is_member_function_pointer_v<Actor>)
 	struct remember_call<Size, Actor, ResultType, type_list<OwnerPtrType, ArgTypes...>>
 		: base_remember_call<Size, ResultType, OwnerPtrType, ArgTypes...> {
 		virtual ResultType CallByMemory(memory_block<Size>& block, OwnerPtrType owner_this, ArgTypes ... args) const override {
@@ -51,11 +52,11 @@ namespace kelbon {
 		mutable memory_block<Size> memory;
 		void* invoker;
 
-		template<callable Actor>
+		template<typename Actor> // additional check for functors with only & operator()
+		requires(::std::invocable<Actor, ArgTypes...>
+			&& ::std::same_as<ResultType, ::std::invoke_result_t<Actor, ArgTypes...>>)
 		void RememberHowToCall() noexcept {
-			using result_type = typename signature<Actor>::result_type;
-			using parameter_list = typename signature<Actor>::parameter_list;
-			new(&invoker) remember_call<Size, Actor, result_type, parameter_list>{};
+			new(&invoker) remember_call<Size, Actor, ResultType, type_list<ArgTypes...>>{};
 		}
 
 		ResultType Call(ArgTypes... args) const {
@@ -63,6 +64,9 @@ namespace kelbon {
 				(&invoker)->CallByMemory(memory, args...);
 		}
 	public:
+
+		// creating
+
 		constexpr action()
 			noexcept(std::is_nothrow_default_constructible_v<memory_block<Size>>)
 			: memory(), invoker(nullptr)
@@ -71,16 +75,14 @@ namespace kelbon {
 			: memory(std::move(other.memory)), invoker(other.invoker) {
 			other.invoker = nullptr;
 		}
-
-		// in case value is a SomeType& template parameter, so its not callable,
-		// its good behavior because memory_block takes control over actor
-		template<callable Actor>
-		requires(func::returns<Actor, ResultType>&& func::accepts<Actor, ArgTypes...>)
+		template<typename Actor>
 		constexpr action(Actor&& actor)
-			noexcept(std::is_nothrow_constructible_v<memory_block<Size>, decltype(actor)>)
+			noexcept(std::is_nothrow_constructible_v<memory_block<Size, ::kelbon::tuple>, Actor&&>)
 			: memory(std::forward<Actor>(actor)) {
 			RememberHowToCall<Actor>();
 		}
+
+		// copying
 
 		// may throw double_free_possible if no avalible copy constructor for stored value
 		[[nodiscard]] action Clone() const {
@@ -90,27 +92,13 @@ namespace kelbon {
 			return clone;
 		}
 
-		// for lambdas, functors
-		template<callable Actor>
-		requires(func::returns<Actor, ResultType>&& func::accepts<Actor, ArgTypes...>)
+		template<typename Actor>
 		constexpr action& operator=(Actor&& something) noexcept {
 			memory = memory_block<Size, ::kelbon::tuple>(std::forward<Actor>(something));
 			RememberHowToCall<Actor>();
 			return *this;
 		}
-		template<typename Actor>
-		requires (functor<Actor>&& std::is_copy_constructible_v<Actor> && func::returns<Actor, ResultType>&& func::accepts<Actor, ArgTypes...>)
-		constexpr action& operator=(const Actor& something) noexcept(std::is_nothrow_copy_constructible_v<Actor>) {
-			memory = memory_block<Size, ::kelbon::tuple>(something);
-			RememberHowToCall<Actor>();
-			return *this;
-		}
 
-		constexpr action& operator=(suitable_func_type* something) noexcept {
-			memory = memory_block<Size, ::kelbon::tuple>(something);
-			RememberHowToCall<suitable_func_type*>();
-			return *this;
-		}
 		constexpr action& operator=(action&& other) noexcept {
 			if (this == &other) [[unlikely]] {
 				return *this;
@@ -121,7 +109,16 @@ namespace kelbon {
 			return *this;
 		}
 
-		
+		// support for kelbon::action a = func_name (without &) 
+		constexpr action(suitable_func_type& func) noexcept
+			: action(&func)
+		{}
+		constexpr action& operator=(suitable_func_type& something) noexcept {
+			return *this = &something;
+		}
+
+		// state observe methods
+
 		[[nodiscard]] constexpr inline bool Empty() const noexcept {
 			return invoker == nullptr;
 		}
@@ -129,7 +126,9 @@ namespace kelbon {
 		[[nodiscard]] constexpr inline bool CanBeCopiedNow() const noexcept {
 			return memory.CanBeCopied();
 		}
-		
+
+		// main functionality
+
 		constexpr ResultType operator()(ArgTypes ... args) const {
 			if (Empty()) [[unlikely]] {
 				throw empty_function_call("You called an empty function, kelbon::action operator()");
@@ -147,9 +146,9 @@ namespace kelbon {
 	template<typename ResultType, typename ... ArgTypes>
 	action(ResultType(*)(ArgTypes...))->action<ResultType(ArgTypes...), default_action_size>;
 
-	// Deduction guide for functors/lamdas with capture/methods
-	template<callable Something, typename ... Types>
-	action(Something&&)->action<typename signature<Something>::func_type, size_helper(sizeof(Something))>;
+	// Deduction guide for functors/lamdas with capture/methods. Impossible to use it for overloaded or template functions
+	template<typename Something, typename ... Types>
+	action(Something&&)->action<typename signature<::std::remove_reference_t<Something>>::func_type, size_helper(sizeof(::std::remove_reference_t<Something>))>;
 
 } // namespace kelbon
 

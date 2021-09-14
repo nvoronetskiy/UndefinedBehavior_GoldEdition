@@ -12,85 +12,15 @@
 #include "kelbon_concepts_functional.hpp"
 #include "kelbon_type_traits_advanced.hpp"
 #include "kelbon_utility.hpp"
+#include "kelbon_memory_block.hpp"
 
 namespace kelbon::coro {
 
-    template<typename T>
-    struct just_type {
-    private:
-        template<typename,typename...>
-        friend struct call;
-
-        T value;
-        bool is_setted = false;
-
-        // метод для awaiter_t и реализации
-        constexpr T get() {
-            if (!is_setted) {
-                throw std::exception("Value for callback result is not setted, kelbon::coro::just_type");
-            }
-            return std::move(value);
-        }
-        constexpr void set(T v) noexcept(std::is_nothrow_move_assignable_v<T>) {
-            value = std::move(v);
-            is_setted = true;
-        }
-    public:
-        // метод для корутины и пользователя
-        constexpr void return_to_callback(T v) noexcept(std::is_nothrow_move_assignable_v<T>) {
-            value = std::move(v);
-            is_setted = true;
-        }
+    // TEMPLATE STRUCT base_promise_type
+    struct prohibit_co_await {
+        template<typename T>
+        void await_transform(T) = delete;
     };
-
-    template<typename T>
-    struct bytes_for {
-    private:
-        std::byte data[sizeof(T)];
-        bool is_setted = false;
-
-        template<typename,typename...>
-        friend struct call;
-
-        // метод для awaiter_t и реализации
-        constexpr T get() {
-            if (!is_setted) {
-                throw std::exception("Value for callback result is not setted, kelbon::coro::bytes_for");
-            }
-            return std::move(*reinterpret_cast<T*>(data));
-        }
-        constexpr void set(T v) noexcept(std::is_nothrow_move_constructible_v<T>) {
-            new(data) T(std::move(v));
-            is_setted = true;
-        }
-    public:
-        // метод для корутины и пользователя
-        constexpr void return_to_callback(T v) noexcept(std::is_nothrow_move_constructible_v<T>) {
-            new(data) T(std::move(v));
-            is_setted = true;
-        }
-        ~bytes_for() {
-            if (is_setted) {
-                reinterpret_cast<T*>(data)->~T();
-            }
-        }
-    private:
-        // methods for working with no default constructible ContextTypes in promise... TODO check if this UB or not
-        template<bool, bool, bool, typename, typename, typename>
-        friend struct base_promise_type;
-
-        constexpr operator T& () noexcept {
-            return std::get<0>(data.GetDataAs<T>());
-        }
-    };
-
-    template<>
-    struct just_type<void> : nullstruct {};
-    template<>
-    struct bytes_for<void> : nullstruct {};
-
-    template<typename T>
-    using storage_type = std::conditional_t<std::is_default_constructible_v<T>, just_type<T>, bytes_for<T>>;
 
     template<typename T>
     struct return_block : return_block<void> {
@@ -112,12 +42,6 @@ namespace kelbon::coro {
         {}
     };
 
-    // TEMPLATE STRUCT base_promise_type
-    struct prohibit_co_await {
-        template<typename T>
-        void await_transform(T) = delete;
-    };
-
     template<
         bool IsImmediateStart,
         bool IsResumable = true,
@@ -131,11 +55,20 @@ namespace kelbon::coro {
     private:
         using ret_block = return_block<ResultType>;
         using transform_block = AwaitTransformer;
-        using context_storage_t = std::conditional_t<std::is_default_constructible_v<ContextType>, ContextType, bytes_for<ContextType>>;
 
-        [[no_unique_address]] context_storage_t my_context; // TODO - проверить ломает ли этот аттрибут что то, если не 0 размер
+        struct memory_block_for_context {
+        private:
+            memory_block<sizeof(ContextType), ::std::tuple> data;
+        public:
+            constexpr operator ContextType& () noexcept {
+                return data.GetDataAs<ContextType>();
+            }
+        };
+        using context_storage_t = std::conditional_t<::std::is_default_constructible_v<ContextType>, ContextType, memory_block_for_context>;
+
+        [[no_unique_address]] context_storage_t my_context;
     public:
-        using co_handle = std::coroutine_handle<base_promise_type>;
+        using co_handle = ::std::coroutine_handle<base_promise_type>;
         static constexpr bool is_resumable = IsResumable;
 
         [[nodiscard]] auto get_return_object() noexcept {
@@ -182,12 +115,12 @@ namespace kelbon::coro {
         constexpr [[nodiscard]] auto operator co_await() const noexcept {
             struct awaiter_t {
             private:
-                mutable std::coroutine_handle<PromiseType> saved_handle;
+                mutable ::std::coroutine_handle<PromiseType> saved_handle;
             public:
                 constexpr bool await_ready() const noexcept {
                     return false;
                 }
-                constexpr bool await_suspend(std::coroutine_handle<PromiseType> handle) const noexcept {
+                constexpr bool await_suspend(::std::coroutine_handle<PromiseType> handle) const noexcept {
                     saved_handle = handle;
                     return false;
                 }
@@ -218,7 +151,7 @@ namespace kelbon::coro {
     public:
         constexpr coroutine() noexcept = default;
         constexpr coroutine(co_handle handle)
-            noexcept(std::is_nothrow_copy_constructible_v<co_handle>)
+            noexcept(::std::is_nothrow_copy_constructible_v<co_handle>)
             : my_handle(handle)
         {}
         coroutine(coroutine&& another) noexcept
@@ -264,7 +197,7 @@ namespace kelbon::coro {
         using base_t = coroutine<base_promise_type<false, true, true, ResultType, ContextType, AwaitTransformer>>;
         using co_handle = typename base_t::co_handle;
 
-        static_assert(!std::is_same_v<ResultType, void>);
+        static_assert(!::std::is_same_v<ResultType, void>);
 
         struct end_iterator {};
         struct gen_iter {
@@ -341,7 +274,7 @@ namespace kelbon::coro {
     // TEMPLATE COROUTINE TYPE grasshopper
     template<typename ... ContextTypes>
     using grasshopper_promise_type = base_promise_type<false, false, true, void,
-        std::conditional_t<sizeof...(ContextTypes) == 1, typename type_list<ContextTypes...>::template get_element<0>, std::tuple<ContextTypes...>>>;
+        ::std::conditional_t<sizeof...(ContextTypes) == 1, typename type_list<ContextTypes...>::template get_element<0>, std::tuple<ContextTypes...>>>;
 
     template<typename ... ContextTypes>
     struct grasshopper : coroutine<grasshopper_promise_type<ContextTypes...>> {
@@ -376,7 +309,7 @@ namespace kelbon::coro {
                 return false;
             }
             template<typename P>
-            constexpr void await_suspend(std::coroutine_handle<P> handle) const
+            constexpr void await_suspend(::std::coroutine_handle<P> handle) const
                 noexcept(noexcept(std::declval<ExecutorType*>()->execute([] {}))) {
                 my_exe->execute([handle] {
                     handle.resume();
@@ -399,7 +332,7 @@ namespace kelbon::coro {
     struct find_signature {
     private:
         template<size_t Number, typename First, typename ... Others>
-        static consteval auto Finder(type_list<First, Others...>, std::integral_constant<size_t, Number>) noexcept {
+        static consteval auto Finder(type_list<First, Others...>, ::std::integral_constant<size_t, Number>) noexcept {
             if constexpr (is_instance_of_v<signature, First>) {
                 struct result
                     : std::integral_constant<size_t, Number> {
@@ -408,13 +341,14 @@ namespace kelbon::coro {
                 return result{};
             }
             else {
-                return Finder(type_list<Others...>{}, std::integral_constant<size_t, Number + 1>{});
+                return Finder(type_list<Others...>{}, ::std::integral_constant<size_t, Number + 1>{});
             }
         }
         template<size_t N>
-        static consteval auto Finder(type_list<>, std::integral_constant<size_t, N>) {
-            static_assert(always_false<std::integral_constant<size_t, N>>(),
-                "TODO Call usage example here You must give me signature of callback, for example kelbon::signature<int(const boost::error_code&, size_t)>");
+        static consteval auto Finder(type_list<>, ::std::integral_constant<size_t, N>) {
+            static_assert(always_false<::std::integral_constant<size_t, N>>(),
+                "Call usage example: auto [x, y] = co_await call(WRAP(func), func_args_before_callback"
+                "kelbon::signature<int(const boost::error_code&, size_t)>, func_args_after_callback");
         }
         using result_t = decltype(Finder(type_list<Types...>{}, std::integral_constant<size_t, 0>{}));
     public:
@@ -430,22 +364,91 @@ namespace kelbon::coro {
         function_name(std::forward<decltype(KELBON__args)>(KELBON__args)...); \
     }
 
+        template<typename T>
+    struct just_type {
+    private:
+        template<typename,typename...>
+        friend struct call;
+
+        T value;
+        bool is_setted = false;
+
+        // метод для awaiter_t и реализации
+        constexpr T get() {
+            if (!is_setted) {
+                throw std::exception("Value for callback result is not setted, kelbon::coro::just_type");
+            }
+            return std::move(value);
+        }
+        constexpr void set(T v) noexcept(std::is_nothrow_move_assignable_v<T>) {
+            value = std::move(v);
+            is_setted = true;
+        }
+    public:
+        // метод для корутины и пользователя
+        constexpr void return_to_callback(T v) noexcept(std::is_nothrow_move_assignable_v<T>) {
+            value = std::move(v);
+            is_setted = true;
+        }
+    };
+
+    template<typename T>
+    struct bytes_for {
+    private:
+        std::byte data[sizeof(T)] = {};
+        bool is_setted = false;
+
+        template<typename,typename...>
+        friend struct call;
+
+        // метод для awaiter_t и реализации
+        constexpr T get() {
+            if (!is_setted) {
+                throw std::exception("Value for callback result is not setted, kelbon::coro::bytes_for");
+            }
+            return std::move(*reinterpret_cast<T*>(data));
+        }
+        constexpr void set(T v) noexcept(std::is_nothrow_move_constructible_v<T>) {
+            new(data) T(std::move(v));
+            is_setted = true;
+        }
+    public:
+        // метод для корутины и пользователя
+        constexpr void return_to_callback(T v) noexcept(std::is_nothrow_move_constructible_v<T>) {
+            new(data) T(std::move(v));
+            is_setted = true;
+        }
+        ~bytes_for() {
+            if (is_setted) {
+                reinterpret_cast<T*>(data)->~T();
+            }
+        }
+    };
+
+    template<>
+    struct just_type<void> : nullstruct {};
+    template<>
+    struct bytes_for<void> : nullstruct {};
+
+    template<typename T>
+    using storage_type = ::std::conditional_t<::std::is_default_constructible_v<T>, just_type<T>, bytes_for<T>>;
+
     // TEMPLATE FOR SPECIAL co_awaitable TYPES call
     template<typename F, typename ... Args>
     struct call {
     private:
-        using cb_signature = decay_t<typename find_signature<::std::remove_reference_t<Args>...>::type>;
-        static constexpr size_t signature_nb = find_signature<::std::remove_reference_t<Args>...>::value;
-        using cb_args_tuple = insert_type_list_t<std::tuple, typename cb_signature::parameter_list>;
+        using cb_signature = decay_t<typename find_signature<Args...>::type>;
+        static constexpr size_t signature_nb = find_signature<Args...>::value;
+        using cb_args_tuple = insert_type_list_t<::std::tuple, typename cb_signature::parameter_list>;
         using cb_result_type = typename cb_signature::result_type;
         using cb_result_storage = storage_type<cb_result_type>;
 
-        using result_args_tuple = std::conditional_t<std::is_void_v<cb_result_type>,
+        using result_args_tuple = ::std::conditional_t<::std::is_void_v<cb_result_type>,
             cb_args_tuple,
-            insert_type_list_t<std::tuple, merge_type_lists_t<typename cb_signature::parameter_list, type_list<cb_result_storage*>>>>;
+            insert_type_list_t<::std::tuple, merge_type_lists_t<typename cb_signature::parameter_list, type_list<cb_result_storage*>>>>;
 
         F f;
-        std::tuple<Args...> input_args;
+        ::std::tuple<Args...> input_args;
         // вместо добавления сюда type erase я сам удалю то что сюда добавил в деструкторе
         storage_type<result_args_tuple> output_args; // если результат void, то size_of == 0 // TODO если у калбека 0 аргументов, то мне нужно очевидно не запоминать этот тупл
 
@@ -458,7 +461,7 @@ namespace kelbon::coro {
                 return false;
             }
             template<typename P>
-            constexpr void await_suspend(std::coroutine_handle<P> handle) {
+            constexpr void await_suspend(::std::coroutine_handle<P> handle) {
 
                 [this, handle] <size_t ... Is1, size_t ... Is2, typename ... CallBackArgs>
                     (value_list<size_t, Is1...>, value_list<size_t, Is2...>, type_list<CallBackArgs...>) -> decltype(auto)
@@ -470,12 +473,12 @@ namespace kelbon::coro {
                         [this, handle](CallBackArgs ... cb_args)                                        // формируемый мной калбек, пробуждающий корутину на нужном потоке
                         {
                             if constexpr (std::is_void_v<cb_result_type>) {
-                                my_call.output_args.set(std::tuple<CallBackArgs...>(cb_args...));       // запоминаю входящие аргументы
+                                my_call.output_args.set(::std::tuple<CallBackArgs...>(cb_args...));       // запоминаю входящие аргументы
                                 handle.resume();                                                        // пробуждаю корутину внутри калбека
                             }
                             else {
                                 cb_result_storage result;
-                                my_call.output_args.set(std::tuple<CallBackArgs..., cb_result_storage*>(cb_args..., &result));
+                                my_call.output_args.set(::std::tuple<CallBackArgs..., cb_result_storage*>(cb_args..., &result));
                                 handle.resume();
                                 return result.get(); // когда корутина в следующий раз отдаст контроль тут продолжится выполнение и значение вернётся
                             }
@@ -494,9 +497,8 @@ namespace kelbon::coro {
         };
     public:
         // конструктор шаблонный, чтобы принимать всё, иначе ожидается rvalue
-        template<typename F_, typename ... Args_>
-        constexpr call(F_&& f, Args_&& ... args)
-            : f(std::forward<F_>(f)), input_args(std::forward<Args_>(args)...), output_args{}
+        constexpr call(F&& f, Args&& ... args)
+            : f(::std::forward<F>(f)), input_args(::std::forward<Args>(args)...), output_args{}
         {}
 
         auto operator co_await() && noexcept {

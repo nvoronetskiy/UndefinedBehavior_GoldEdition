@@ -10,8 +10,8 @@
 #include "kelbon_template_base_class.hpp"
 
 namespace kelbon::test {
-	
-	// ничего не принимает, возвращает bool, обычный тестик
+	namespace std = ::std;
+
 	using base_test = ::kelbon::base_action<void>;
 	using test_task = act_wrapper<base_action, void(*)()>;
 

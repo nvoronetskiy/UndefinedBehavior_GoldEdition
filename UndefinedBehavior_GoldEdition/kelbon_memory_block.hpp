@@ -28,7 +28,6 @@ namespace kelbon {
 		virtual constexpr inline bool is_nothrow_copy_constructible() const noexcept = 0;
 	};
 
-	// false false case
 	template<typename T>
 	requires(std::destructible<T>)
 	struct remember_type_info final
@@ -282,12 +281,12 @@ namespace kelbon {
 		}
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
 		[[nodiscard]] constexpr TupleType<Types...>& GetDataAs() noexcept {
-			return *(reinterpret_cast<TupleType<Types...>*>(const_cast<std::byte*>(data)));
+			return *(reinterpret_cast<TupleType<Types...>*>(data));
 		}
 		// same as GetDataAs, but with checking if right types you trying to get, if not - exception thrown
 		template<typename ... Types> requires(sizeof(TupleType<Types...>) <= max_size)
 		[[nodiscard]] constexpr const TupleType<Types...>& SafeGetDataAs() const {
-			auto check_value = remember_type_info<TupleType<Types...>>{};
+			constinit auto check_value = remember_type_info<TupleType<Types...>>{};
 
 			if ((*(reinterpret_cast<void**>(&check_value))) != memory) {
 				throw bad_memory_block_access(
@@ -316,9 +315,9 @@ namespace kelbon {
 		}
 	private:
 		template<typename ... Types, typename Traits, size_t ... Indexes>
-		std::basic_ostream<char, Traits>& WriteAs_helper(std::basic_ostream<char, Traits>& ostream, value_list<size_t, Indexes...>) const noexcept {
+		std::basic_ostream<char, Traits>& WriteAs_helper(::std::basic_ostream<char, Traits>& ostream, value_list<size_t, Indexes...>) const noexcept {
 			const auto& tuple_to_write = GetDataAs<Types...>();
-			((WriteToStream(ostream, std::get<Indexes>(tuple_to_write))), ...);
+			((WriteToStream(ostream, ::std::get<Indexes>(tuple_to_write))), ...);
 			return ostream;
 		}
 		template<typename ... Types, typename Traits, size_t  ... Indexes>
